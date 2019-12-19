@@ -87,21 +87,8 @@ simulate_data <- function(
     group1_psi <- sort(rgamma(n = K, shape = a, rate = b), decreasing = FALSE)
     cov_mat1 <- (
       (group1_psi * diag(K)) + gamma_cov_L) %*% t((group1_psi * diag(K)) + gamma_cov_L)
-    # cov_mat1 <- (
-    #   ( diag(K)) + gamma_cov_L) %*% t((diag(K)) + gamma_cov_L)
     gammas <- mvrnorm(
       n = N, mu = rep(0, K), Sigma = cov_mat1)
-    # delta_cov_L <- matrix(data = 0, nrow = K, ncol = K)
-    # for(i in 2:K){
-    #   delta_cov_L[i:K, (i-1)] <- rnorm(K - (i- 1), mean = 0, sd = 1)
-    # }
-    # c <- rgamma(1, shape = 2, rate = 2)
-    # d <- rgamma(1, shape = 2, rate = 2)
-    # # group2_psi <- sort(rgamma(n = K, shape = c, rate = d), decreasing = FALSE)
-    # # cov_mat2 <- (
-    # #   (group2_psi * diag(K)) + group2_L) %*% t((group2_psi * diag(K)) + group2_L)
-    # cov_mat2 <- (
-    #   (diag(K)) + group2_L) %*% t((diag(K)) + group2_L)
     deltas <- mvrnorm(
       n = J, mu = rep(0, K), Sigma = diag(K))
     

@@ -1,0 +1,50 @@
+---
+title: "Identification, Inference, and Prediction"
+author: "Adam M. Lauretig"
+date: "12/18/2019"
+output: beamer_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+## Welcome
+ 
+- Talk: Parameter identification, what it means for inference and prediction
+- Latent Variable Models: Factorization Machines, Interactive Fixed Effects
+- Stan code $+$ simulations!
+
+## Who I Am
+
+- Data Scientist
+- Previously, Ph.D. in political science (at THE Ohio State University)
+- Word Embeddings, Causal Inference, Bayesian Statistics
+ 
+## Why We Model
+
+- Descriptive Inference: is there an association between $\pmb{X}$ and $\pmb{y}$?
+- Prediction: with $\pmb{X}$ and $\pmb{y}$, what is $\pmb{y}$ for a new $\pmb{X}$?
+- Causal Inference: does changing $\pmb{X}$, change $\pmb{y}$?
+- Shameless plug: Book Chapter **insert link**
+
+
+## Parameter Identification
+
+- Unique solution to the model
+- Necessary for causal inference
+- Allows for uncertainty and interpretability
+
+
+## Latent Variable Models
+
+
+
+
+## Slide with Plot
+
+```{r pressure}
+plot(pressure)
+```
+
