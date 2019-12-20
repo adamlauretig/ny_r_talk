@@ -5,8 +5,14 @@ date: "12/18/2019"
 output: beamer_presentation
 ---
 
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
+def.chunk.hook  <- knitr::knit_hooks$get("chunk")
+knitr::knit_hooks$set(chunk = function(x, options) {
+  x <- def.chunk.hook(x, options)
+  ifelse(options$size != "normalsize", paste0("\n \\", options$size,"\n\n", x, "\n\n \\normalsize"), x)
+})
 ```
 
 
@@ -39,12 +45,110 @@ knitr::opts_chunk$set(echo = FALSE)
 
 ## Latent Variable Models
 
+- Learning parameters to reconstruct observed data
+- Ex: Principal Components Analysis, Factor Analysis, Word2vec, etc
+- Data $\pmb{X}_{N \times J}$ is decomposed into two low rank matrices: $\pmb{\gamma}_{N \times K}$ and $\pmb{\delta}_{K \times J}$
+- Various assumptions about the structure of $\pmb{\gamma}$ and $\pmb{\delta}$
+
+
+## Factorization Machines/Interactive Fixed Effects
+
+- Combine regression with a latent variable model on the residuals
+
+# But Why?
+
+## Factorization Machines/Interactive Fixed Effects
 
 
 
-## Slide with Plot
+- Regression Model, for one observation
+- Categorical predictors $\pmb{x}_{n \in N}$, $\pmb{x}_{j \in J}$
+- Outcome $\pmb{y}$ 
+- Parameters $\pmb{\beta}$
+<!-- - Error $\varepsilon_{nj}$ -->
+$$ y_{nj} = \pmb{x}_{n} \beta_{1} + \pmb{x}_{j} \beta_{2} + \varepsilon_{nj} $$
 
-```{r pressure}
-plot(pressure)
+```{r, chunk_1, eval = FALSE, echo = TRUE, size = 'small'}
+m1 <- lm(y ~ factor(group_1) + factor(group_2))
+```
+
+
+- With Interactions
+
+$$ y_{nj} = \pmb{x}_{n} \beta_{1} + \pmb{x}_{j} \beta_{2} + \pmb{x}_{n} \times  \pmb{x}_{j} \beta_{3} + \varepsilon_{nj} $$
+
+```{r, chunk_2, eval = FALSE, echo = TRUE, size = 'small'}
+m1 <- lm(y ~ factor(group_1) * factor(group_2))
+```
+
+## Factorization Machines/Interactive Fixed Effects
+
+Problems!
+- We can only estimate $\beta_{3}$ for observed interactions
+- As $N$ and $J$ grow, $\beta_{3}$ increases $N*J$
+
+
+## Factorization Machines/Interactive Fixed Effects
+
+Solution!
+
+- Replace $\beta_{3}$ with the dot product of low-rank latent factors: 
+- $\pmb{\gamma}_{N \times K}$
+- $\pmb{\delta}_{J \times K}$
+
+- $\beta_{3}$ is now $\gamma_{n} \cdot \delta_{j}^{\top}$
+
+## Factorization Machines/Interactive Fixed Effects
+
+- Interaction model:
+$$ y_{nj} = \pmb{x}_{n} \beta_{1} + \pmb{x}_{j} \beta_{2} + \gamma_{n} \cdot \delta_{j}^{\top} + \varepsilon_{nj} $$
+- Depending on our assumptions about  $\gamma_{n} \cdot \delta_{j}^{\top}$, we can now create FMs or IFEs
+
+## Factorization Machines
+
+- Each element of $\delta_{j}$ and $\gamma_{n}$ is Normally distributed
+- Automatic Relevance Determination (ARD) prior to shrink the matrix rank
+
+
+\begin{align*}
+y_{nj} &\sim N( \pmb{x}_{n} \beta_{1} + \pmb{x}_{j} \beta_{2} + \gamma_{n} \cdot \delta_{j}^{\top}, 1) \\
+\pmb{\beta} &\sim N(0, \sigma^{2}) \\
+\gamma_{n,k} &\sim N(0, \psi_{k}) \\
+\delta_{j,k} &\sim N(0, 1) \\
+\psi_{k} &\sim \text{Gam}(a, b) \\
+a &\sim \text{Gam}(1, 1) \\
+b &\sim \text{Gam}(1, 1) \\
+\end{align*}
+
+
+## Simulate a Factorization Machine:
+
+```{r, simulate_fm, echo = TRUE, eval = FALSE, size = "tiny"}
+seed_to_use = 123
+N = 1
+J = 1
+K = 1
+set.seed(seed_to_use)
+# number of levels for first covariate
+N <- N
+group_1 <- paste0("i", 1:N)
+# number of levels for second covariate
+J <- J
+group_2 <- paste0("j", 1:J)
+# number of latent dimensions
+K <- K
+
+# observed data ----
+predictors <- expand.grid(group_1 = group_1, group_2 = group_2)
+X_mat <- sparse.model.matrix(~ factor(group1) + factor(group_2) - 1, data = predictors)
+
+# for sparsity, since here, we're assuming we have only dummies
+# creating numeric values for each individual FE
+predictors_as_numeric <- cbind(as.numeric(factor(predictors[, 1])), as.numeric(factor(predictors[, 2])))
+
+# the regression part of the equation
+betas <- matrix(rnorm(n = ncol(X_mat), 0, 2))
+linear_predictor <- X_mat %*% betas
+
 ```
 
