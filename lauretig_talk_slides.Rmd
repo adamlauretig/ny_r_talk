@@ -123,7 +123,9 @@ b &\sim \text{Gam}(1, 1) \\
 
 ## Simulate a Factorization Machine:
 
-```{r, simulate_fm, echo = TRUE, eval = FALSE, size = "tiny"}
+First, the regression component:
+
+```{r, simulate_fm1, echo = TRUE, eval = FALSE, size = "tiny"}
 seed_to_use = 123
 N = 1
 J = 1
@@ -144,11 +146,50 @@ X_mat <- sparse.model.matrix(~ factor(group1) + factor(group_2) - 1, data = pred
 
 # for sparsity, since here, we're assuming we have only dummies
 # creating numeric values for each individual FE
-predictors_as_numeric <- cbind(as.numeric(factor(predictors[, 1])), as.numeric(factor(predictors[, 2])))
+predictors_as_numeric <- cbind(
+  as.numeric(factor(predictors[, 1])), as.numeric(factor(predictors[, 2])))
 
 # the regression part of the equation
 betas <- matrix(rnorm(n = ncol(X_mat), 0, 2))
 linear_predictor <- X_mat %*% betas
 
+```
+
+## Simulate a Factorization Machine:
+
+Next, the latent factors:
+```{r simulate_fm2, echo = TRUE, eval = FALSE, size = "tiny"}
+    # FM factors ----
+    # group_1 factors are gammas
+    # gamma_sd <- sort(rgamma(K, .1, .1), decreasing = TRUE)
+    a <- rgamma(1, shape = 2, rate = 2)
+    b <- rgamma(1, shape = 2, rate = 2)
+    
+    gamma_sd <- sort(rgamma(n = K, shape = a, rate = b), decreasing = FALSE)
+    gammas <- mvrnorm(
+      n = N, mu = rep(0, K), Sigma = gamma_sd * diag(K))
+    
+    # group 2 factors are deltas
+    deltas <- mvrnorm(
+      n = J, mu = rep(0, K), Sigma = diag(K))
+    
+    factor_terms <- matrix(NA, nrow = nrow(linear_predictor), ncol = 1)
+    
+    # multiply factors for each observation
+    for(i in 1:nrow(predictors)){
+      g1 <- as.character(predictors[i, 1])
+      g1 <- as.numeric(substr(g1, 2, nchar(g1)))
+      
+      g2 <- as.character(predictors[i, 2])
+      g2 <- as.numeric(substr(g2, 2, nchar(g2)))
+      
+      factor_terms[i, ] <- matrix(
+        gammas[g1, ], nrow = 1) %*% 
+        matrix(deltas[g2, ], ncol = 1)
+    }
+    
+    y <- linear_predictor + factor_terms + rnorm(
+      n = nrow(linear_predictor), 0, 1)
+    
 ```
 
