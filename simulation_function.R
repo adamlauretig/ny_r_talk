@@ -1,10 +1,16 @@
 # function to simulate data for ife/factorization machine
+# Prior-related function arguments are set to reasonable values
+# Data-based arguments (N, J, K) are not, and should be changed
+
+# Notation follows the slides in this repo
 
 library(MASS)
 library(Matrix)
 
 simulate_data <- function(
-  seed_to_use = 123, N = 1, J = 1, K = 1, fm = FALSE, ife = FALSE){
+  seed_to_use = 123, N = 5, J = 5, K = 1, fm = FALSE, ife = FALSE, 
+  gamma_a_1 = 1, gamma_a_2 = 1, gamma_b_1 = 1, gamma_b_2 = 1,
+  beta_sigma = 3, y_sigma = 1){
   set.seed(seed_to_use)
   # number of levels for first covariate
   N <- N
@@ -18,7 +24,7 @@ simulate_data <- function(
   # observed data ----
   predictors <- expand.grid(group_1 = group_1, group_2 = group_2)
   X_mat <- sparse.model.matrix(
-    ~ factor(group1) + factor(group_2) - 1, data = predictors)
+    ~ factor(group_1) + factor(group_2) - 1, data = predictors)
   
   # for sparsity, since here, we're assuming we have only dummies
   # creating numeric values for each individual FE
@@ -26,7 +32,7 @@ simulate_data <- function(
     as.numeric(factor(predictors[, 1])), as.numeric(factor(predictors[, 2])))
   
   # the regression part of the equation
-  betas <- matrix(rnorm(n = ncol(X_mat), 0, 2))
+  betas <- matrix(rnorm(n = ncol(X_mat), 0, beta_sigma))
   linear_predictor <- X_mat %*% betas
   
   if(fm == FALSE & ife == FALSE){
@@ -36,16 +42,15 @@ simulate_data <- function(
     stop("Pick either fm (Factorization Machine) or ife (Interactive Fixed Effects), not both")
   }
   
+  # fm ----
   if(fm == TRUE){
-    # FM factors ----
     # group_1 factors are gammas
-    # gamma_sd <- sort(rgamma(K, .1, .1), decreasing = TRUE)
-    a <- rgamma(1, shape = 2, rate = 2)
-    b <- rgamma(1, shape = 2, rate = 2)
+    a <- rgamma(1, shape = gamma_a_1, rate = gamma_a_2)
+    b <- rgamma(1, shape = gamma_b_1, rate = gamma_b_2)
     
-    gamma_sd <- sort(rgamma(n = K, shape = a, rate = b), decreasing = FALSE)
+    gamma_psi <- sort(rgamma(n = K, shape = a, rate = b), decreasing = FALSE)
     gammas <- mvrnorm(
-      n = N, mu = rep(0, K), Sigma = gamma_sd * diag(K))
+      n = N, mu = rep(0, K), Sigma = gamma_psi * diag(K))
     
     # group 2 factors are deltas
 
@@ -67,23 +72,24 @@ simulate_data <- function(
     }
     
     y <- linear_predictor + factor_terms + rnorm(
-      n = nrow(linear_predictor), 0, 1)
+      n = nrow(linear_predictor), 0, y_sigma)
     
     data_list <- list(
       N = N, J = J, K = K, X = predictors_as_numeric, y = as.numeric(y)
     )
     params_list <- list(betas = betas, gammas = gammas, deltas = deltas, 
-      a = a, b = b, gamma_sd = gamma_sd, factor_terms = factor_terms)
+      a = a, b = b, gamma_psi = gamma_psi, factor_terms = factor_terms)
     return(list(data_list, params_list))
   }
   
+  # ife ----
   if(ife == TRUE){
     gamma_cov_L <- matrix(data = 0, nrow = K, ncol = K)
     for(i in 2:K){
       gamma_cov_L[i:K, (i-1)] <- rnorm(K - (i- 1), mean = 0, sd = 1)
     }
-    a <- rgamma(1, shape = 2, rate = 2)
-    b <- rgamma(1, shape = 2, rate = 2)
+    a <- rgamma(1, shape = gamma_a_1, rate = gamma_a_2)
+    b <- rgamma(1, shape = gamma_b_1, rate = gamma_b_2)
     group1_psi <- sort(rgamma(n = K, shape = a, rate = b), decreasing = FALSE)
     cov_mat1 <- (
       (group1_psi * diag(K)) + gamma_cov_L) %*% t((group1_psi * diag(K)) + gamma_cov_L)
@@ -107,7 +113,7 @@ simulate_data <- function(
     }
     
     y <- linear_predictor + factor_terms + rnorm(
-      n = nrow(linear_predictor), 0, 1)
+      n = nrow(linear_predictor), 0, y_sigma)
     data_list <- list(
       N = N, J = J, K = K, X = predictors_as_numeric, y = as.numeric(y)
     )
