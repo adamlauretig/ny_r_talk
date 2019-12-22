@@ -159,37 +159,35 @@ linear_predictor <- X_mat %*% betas
 
 Next, latent factors:
 ```{r simulate_fm2, echo = TRUE, eval = FALSE, size = "tiny"}
-    # FM factors ----
-    # group_1 factors are gammas
-    # gamma_sd <- sort(rgamma(K, .1, .1), decreasing = TRUE)
-    a <- rgamma(1, shape = 2, rate = 2)
-    b <- rgamma(1, shape = 2, rate = 2)
-    
-    gamma_sd <- sort(rgamma(n = K, shape = a, rate = b), decreasing = FALSE)
-    gammas <- mvrnorm(
-      n = N, mu = rep(0, K), Sigma = gamma_sd * diag(K))
-    
-    # group 2 factors are deltas
-    deltas <- mvrnorm(
-      n = J, mu = rep(0, K), Sigma = diag(K))
-    
-    factor_terms <- matrix(NA, nrow = nrow(linear_predictor), ncol = 1)
-    
-    # multiply factors for each observation
-    for(i in 1:nrow(predictors)){
-      g1 <- as.character(predictors[i, 1])
-      g1 <- as.numeric(substr(g1, 2, nchar(g1)))
-      
-      g2 <- as.character(predictors[i, 2])
-      g2 <- as.numeric(substr(g2, 2, nchar(g2)))
-      
-      factor_terms[i, ] <- matrix(
-        gammas[g1, ], nrow = 1) %*% 
-        matrix(deltas[g2, ], ncol = 1)
-    }
-    
-    y <- linear_predictor + factor_terms + rnorm(
-      n = nrow(linear_predictor), 0, 1)
+# group_1 factors are gammas
+a <- rgamma(1, shape = gamma_a_1, rate = gamma_a_2)
+b <- rgamma(1, shape = gamma_b_1, rate = gamma_b_2)
+
+gamma_psi <- sort(rgamma(n = K, shape = a, rate = b), decreasing = FALSE)
+gammas <- mvrnorm(
+  n = N, mu = rep(0, K), Sigma = gamma_psi * diag(K))
+
+# group 2 factors are deltas
+
+deltas <- mvrnorm(
+  n = J, mu = rep(0, K), Sigma = diag(K))
+
+factor_terms <- matrix(NA, nrow = nrow(linear_predictor), ncol = 1)
+
+for(i in 1:nrow(predictors)){
+  g1 <- as.character(predictors[i, 1])
+  g1 <- as.numeric(substr(g1, 2, nchar(g1)))
+  
+  g2 <- as.character(predictors[i, 2])
+  g2 <- as.numeric(substr(g2, 2, nchar(g2)))
+  
+  factor_terms[i, ] <- matrix(
+    gammas[g1, ], nrow = 1) %*% 
+    matrix(deltas[g2, ], ncol = 1)
+}
+
+y <- linear_predictor + factor_terms + rnorm(
+  n = nrow(linear_predictor), 0, y_sigma)
     
 ```
 
@@ -279,3 +277,13 @@ model{
 }
 
 ```
+
+
+## Fitting a Model to Simulated Data
+
+- Using `simulate_data` in `simulation_function.R`.
+- Two versions:
+- 100 members of group 1, 20 members of group 2
+- 20 members of group 1, 100 members of group 2
+- Fit model in `stan`, using `vb()` (note: you can also use `NUTS` for this)
+

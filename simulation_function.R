@@ -9,7 +9,7 @@ library(Matrix)
 
 simulate_data <- function(
   seed_to_use = 123, N = 5, J = 5, K = 1, fm = FALSE, ife = FALSE, 
-  gamma_a_1 = 1, gamma_a_2 = 1, gamma_b_1 = 1, gamma_b_2 = 1,
+  a_hyperprior_1 = 1, a_hyperprior_2 = 1, b_hyperprior_1 = 1, b_hyperprior_2 = 1,
   beta_sigma = 3, y_sigma = 1){
   set.seed(seed_to_use)
   # number of levels for first covariate
@@ -45,8 +45,8 @@ simulate_data <- function(
   # fm ----
   if(fm == TRUE){
     # group_1 factors are gammas
-    a <- rgamma(1, shape = gamma_a_1, rate = gamma_a_2)
-    b <- rgamma(1, shape = gamma_b_1, rate = gamma_b_2)
+    a <- rgamma(1, shape = a_hyperprior_1, rate = a_hyperprior_2)
+    b <- rgamma(1, shape = b_hyperprior_1, rate = b_hyperprior_2)
     
     gamma_psi <- sort(rgamma(n = K, shape = a, rate = b), decreasing = FALSE)
     gammas <- mvrnorm(
@@ -75,10 +75,14 @@ simulate_data <- function(
       n = nrow(linear_predictor), 0, y_sigma)
     
     data_list <- list(
-      N = N, J = J, K = K, X = predictors_as_numeric, y = as.numeric(y)
+      N = N, J = J, K = K, X = predictors_as_numeric, y = as.numeric(y),
+      beta_sigma = beta_sigma, y_sigma = y_sigma, 
+      a_hyperprior_1 = a_hyperprior_1, a_hyperprior_2 = a_hyperprior_2,
+      b_hyperprior_1 = b_hyperprior_1, b_hyperprior_2 = b_hyperprior_2
     )
     params_list <- list(betas = betas, gammas = gammas, deltas = deltas, 
-      a = a, b = b, gamma_psi = gamma_psi, factor_terms = factor_terms)
+      a = a, b = b, gamma_psi = gamma_psi, factor_terms = factor_terms, 
+      linear_predictor = linear_predictor)
     return(list(data_list, params_list))
   }
   
@@ -88,8 +92,8 @@ simulate_data <- function(
     for(i in 2:K){
       gamma_cov_L[i:K, (i-1)] <- rnorm(K - (i- 1), mean = 0, sd = 1)
     }
-    a <- rgamma(1, shape = gamma_a_1, rate = gamma_a_2)
-    b <- rgamma(1, shape = gamma_b_1, rate = gamma_b_2)
+    a <- rgamma(1, shape = a_hyperprior_1, rate = a_hyperprior_2)
+    b <- rgamma(1, shape = b_hyperprior_1, rate = b_hyperprior_2)
     group1_psi <- sort(rgamma(n = K, shape = a, rate = b), decreasing = FALSE)
     cov_mat1 <- (
       (group1_psi * diag(K)) + gamma_cov_L) %*% t((group1_psi * diag(K)) + gamma_cov_L)
@@ -115,11 +119,14 @@ simulate_data <- function(
     y <- linear_predictor + factor_terms + rnorm(
       n = nrow(linear_predictor), 0, y_sigma)
     data_list <- list(
-      N = N, J = J, K = K, X = predictors_as_numeric, y = as.numeric(y)
+      N = N, J = J, K = K, X = predictors_as_numeric, y = as.numeric(y),
+      beta_sigma = beta_sigma, y_sigma = y_sigma, 
+      a_hyperprior_1 = a_hyperprior_1, a_hyperprior_2 = a_hyperprior_2,
+      b_hyperprior_1 = b_hyperprior_1, b_hyperprior_2 = b_hyperprior_2
     )
     params_list <- list(betas = betas, gammas = gammas, deltas = deltas, 
       cov_mat1 = cov_mat1, a = a, b = b, group1_psi = group1_psi, 
-      factor_terms = factor_terms)
+      factor_terms = factor_terms, linear_predictor = linear_predictor)
     return(list(data_list, params_list))
   }
   

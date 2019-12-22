@@ -23,7 +23,7 @@ parameters{
 }
 
 transformed parameters{
-  vector[(N*J)] linear_predictor ;
+  real linear_predictor[(N*J)] ;
   for(i in 1:(N*J)){
     linear_predictor[i] = group_1_betas[X[i, 1]] + group_2_betas[X[i, 2]] + (gammas[X[i, 1], ]  * deltas[ X[i, 2], ]');
   }
@@ -52,4 +52,7 @@ model{
   // outcome
   y ~ normal(linear_predictor, y_sigma) ;
 }
-
+generated quantities{
+  real y_pred[(N*J)]  ;
+  y_pred = normal_rng(linear_predictor, y_sigma) ;
+}
