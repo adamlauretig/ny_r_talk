@@ -42,11 +42,11 @@ model{
 
   // latent factors
   for(n in 1:N){
-    gammas[n, ] ~ normal(0, gamma_sd) ;
+    gammas[n, ] ~ normal(rep_vector(0, K), gamma_sd) ;
   }
   
     for(j in 1:J){
-    deltas[j, ] ~ normal(0, 1) ;
+    deltas[j, ] ~ normal(rep_vector(0, K), 1) ;
   }
   
   // outcome
