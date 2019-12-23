@@ -126,7 +126,8 @@ simulate_data <- function(
     )
     params_list <- list(betas = betas, gammas = gammas, deltas = deltas, 
       cov_mat1 = cov_mat1, a = a, b = b, group1_psi = group1_psi, 
-      factor_terms = factor_terms, linear_predictor = linear_predictor)
+      gamma_cov_L = gamma_cov_L, factor_terms = factor_terms, 
+      linear_predictor = linear_predictor)
     return(list(data_list, params_list))
   }
   

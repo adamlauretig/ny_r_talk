@@ -58,7 +58,8 @@ transformed parameters{
   // }
   // 
   for(i in 1:(N*J)){
-    linear_predictor[i] = group_1_betas[X[i, 1]] + group_2_betas[X[i, 2]] + (gammas[X[i, 1], ]  * deltas[ X[i, 2], ]');
+    linear_predictor[i] = group_1_betas[X[i, 1]] + group_2_betas[X[i, 2]] + 
+    (gammas[X[i, 1], ]  * deltas[ X[i, 2], ]');
   }
 }
 model{
