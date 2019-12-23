@@ -94,7 +94,8 @@ simulate_data <- function(
     }
     a <- rgamma(1, shape = a_hyperprior_1, rate = a_hyperprior_2)
     b <- rgamma(1, shape = b_hyperprior_1, rate = b_hyperprior_2)
-    group1_psi <- sort(rgamma(n = K, shape = a, rate = b), decreasing = FALSE)
+    # group1_psi <- sort(rgamma(n = K, shape = a, rate = b), decreasing = FALSE)
+    group1_psi <- diag(K)
     cov_mat1 <- (
       (group1_psi * diag(K)) + gamma_cov_L) %*% t((group1_psi * diag(K)) + gamma_cov_L)
     gammas <- mvrnorm(

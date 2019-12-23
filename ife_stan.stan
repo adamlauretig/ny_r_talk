@@ -18,18 +18,19 @@ transformed data {
 parameters{
   vector[N] group_1_betas; // non-interacted coefficients
   vector[J] group_2_betas; // non-interacted coefficients
-  matrix[N, K] gammas; // individual factors
   matrix[J, K] deltas; // group 2 factors
   positive_ordered[K] gamma_psi; //gamma diag
   real<lower = 0> a; // gamma hyperprior a
   real<lower = 0> b; // gamma hyperprior b
   vector[K_choose_2] gamma_cov_lower_tri; // fix upper tri for parameter identification
+  vector[K] z[N]; // for non-centered parameterization
   // vector[K_choose_2] delta_cov_lower_tri; // fix upper tri for parameter identification
   
 }
 transformed parameters{
   vector[(N*J)] linear_predictor ;
   cholesky_factor_cov[K] gamma_L;
+  matrix[N, K] gammas; // individual factors
   // cholesky_factor_cov[K] delta_L;
   for (k in 1:K)
     gamma_L[k, k] = gamma_psi[k];
@@ -57,6 +58,11 @@ transformed parameters{
   //   }
   // }
   // 
+  
+  for(n in 1:N){
+    gammas[n, ] = (( gamma_L) * z[n])' ;
+  }
+  
   for(i in 1:(N*J)){
     linear_predictor[i] = group_1_betas[X[i, 1]] + group_2_betas[X[i, 2]] + 
     (gammas[X[i, 1], ]  * deltas[ X[i, 2], ]');
@@ -65,16 +71,16 @@ transformed parameters{
 model{
   group_1_betas ~ normal(0, beta_sigma) ;
   group_2_betas ~ normal(0, beta_sigma) ;
-  
+  for(n in 1:N){
+    z[n] ~ normal(0 , 1) ;
+  }
   // delta_cov_lower_tri ~ normal(0, 1) ;
   gamma_cov_lower_tri ~ normal(0, 1) ;
 
   a ~ gamma(a_hyperprior_1, a_hyperprior_2) ;
   b ~ gamma(b_hyperprior_1, b_hyperprior_2) ;
   gamma_psi ~ gamma(a, b) ;
-  for(n in 1:N){
-    gammas[n, ] ~ multi_normal_cholesky(rep_vector(0, K), gamma_L) ;
-  }
+
   for(j in 1:J){
     deltas[j, ] ~ normal(rep_vector(0, K), 1) ;
   }
