@@ -19,10 +19,11 @@ parameters{
   vector[N] group_1_betas; // non-interacted coefficients
   vector[J] group_2_betas; // non-interacted coefficients
   matrix[J, K] deltas; // group 2 factors
-  positive_ordered[K] gamma_psi; //gamma diag
+  vector<lower = 0>[K] gamma_psi; //gamma diag
   real<lower = 0> a; // gamma hyperprior a
   real<lower = 0> b; // gamma hyperprior b
   vector[K_choose_2] gamma_cov_lower_tri; // fix upper tri for parameter identification
+  vector[K] gamma_mean[N]; // for non-centered parameterization
   vector[K] z[N]; // for non-centered parameterization
   // vector[K_choose_2] delta_cov_lower_tri; // fix upper tri for parameter identification
   
@@ -60,7 +61,7 @@ transformed parameters{
   // 
   
   for(n in 1:N){
-    gammas[n, ] = (( gamma_L) * z[n])' ;
+    gammas[n, ] = (gamma_mean[n] + ( gamma_L) * z[n])' ;
   }
   
   for(i in 1:(N*J)){
@@ -72,10 +73,11 @@ model{
   group_1_betas ~ normal(0, beta_sigma) ;
   group_2_betas ~ normal(0, beta_sigma) ;
   for(n in 1:N){
-    z[n] ~ normal(0 , 1) ;
+    z[n] ~ normal(0, .1) ;
+    gamma_mean[n] ~ normal(0, 1) ;
   }
   // delta_cov_lower_tri ~ normal(0, 1) ;
-  gamma_cov_lower_tri ~ normal(0, 1) ;
+  gamma_cov_lower_tri ~ normal(0, .5) ;
 
   a ~ gamma(a_hyperprior_1, a_hyperprior_2) ;
   b ~ gamma(b_hyperprior_1, b_hyperprior_2) ;
