@@ -19,21 +19,24 @@ parameters{
   vector[N] group_1_betas; // non-interacted coefficients
   vector[J] group_2_betas; // non-interacted coefficients
   matrix[N, K] gammas; // individual factors
-  matrix[J, K] deltas; // group 2 factors
-  // vector<lower = 0>[K] gamma_psi; //gamma diag
-  // real<lower = 0> a; // gamma hyperprior a
-  // real<lower = 0> b; // gamma hyperprior b
+  // matrix[J, K] deltas; // group 2 factors
+  vector<lower = 0>[K] delta_psi; //gamma diag
+  real<lower = 0> a; // gamma hyperprior a
+  real<lower = 0> b; // gamma hyperprior b
   vector[K_choose_2] gamma_cov_lower_tri; // fix upper tri for parameter identification
-  // vector[K] gamma_mean[N]; // for non-centered parameterization
-  // vector[K] z[N]; // for non-centered parameterization
+  vector[K] delta_mean[J]; // for non-centered parameterization
+  vector[K] z[J]; // for non-centered parameterization
   vector[K_choose_2] delta_cov_lower_tri; // fix upper tri for parameter identification
+  cholesky_factor_cov[K] delta_L ;
   
 }
 transformed parameters{
   vector[(N*J)] linear_predictor ;
   cholesky_factor_cov[K] gamma_L;
+  matrix[K, K] L ;
+  matrix[J, K] deltas; // group 2 factors
   // matrix[N, K] gammas; // individual factors
-  cholesky_factor_cov[K] delta_L;
+  // cholesky_factor_cov[K] delta_L;
   for (k in 1:K)
     gamma_L[k, k] = 1;
   {
@@ -47,20 +50,22 @@ transformed parameters{
     }
   }
   
-  for (k in 1:K)
-    delta_L[k, k] = 1;
-  {
-    int i = 1;
-    for (m in 2:K) {
-      for (n in 1:(m - 1)) {
-        delta_L[m, n] = delta_cov_lower_tri[i];
-        delta_L[n, m] = 0;
-        i += 1;
-      }
-    }
+  // for (k in 1:K)
+  //   delta_L[k, k] = 1;
+  // {
+  //   int i = 1;
+  //   for (m in 2:K) {
+  //     for (n in 1:(m - 1)) {
+  //       delta_L[m, n] = delta_cov_lower_tri[i];
+  //       delta_L[n, m] = 0;
+  //       i += 1;
+  //     }
+  //   }
+  // }
+  L = diag_pre_multiply(delta_psi, delta_L) ;
+  for(j in 1:J){
+    deltas[j, ] =  (delta_mean[j] + L * z[j])';
   }
-
-  
 
   
   for(i in 1:(N*J)){
@@ -71,22 +76,23 @@ transformed parameters{
 model{
   group_1_betas ~ normal(0, beta_sigma) ;
   group_2_betas ~ normal(0, beta_sigma) ;
-  // for(n in 1:N){
-  //   z[n] ~ normal(0, .1) ;
-  //   gamma_mean[n] ~ normal(0, .1) ;
-  // }
+  for(j in 1:J){
+    z[j] ~ normal(0, 1) ;
+    delta_mean[j] ~ normal(0, 1) ;
+  }
   delta_cov_lower_tri ~ normal(0, 1) ;
   gamma_cov_lower_tri ~ normal(0, 1) ;
 
-  // a ~ gamma(a_hyperprior_1, a_hyperprior_2) ;
-  // b ~ gamma(b_hyperprior_1, b_hyperprior_2) ;
-  // gamma_psi ~ gamma(a, b) ;
+  a ~ gamma(a_hyperprior_1, a_hyperprior_2) ;
+  b ~ gamma(b_hyperprior_1, b_hyperprior_2) ;
+  delta_psi ~ gamma(a, b) ;
+  delta_L ~ lkj_corr_cholesky(4) ;
   for(n in 1:N){
     gammas[n, ] ~  multi_normal_cholesky(rep_vector(0, K), gamma_L) ;
   }
-  for(j in 1:J){
-    deltas[j, ] ~ multi_normal_cholesky(rep_vector(0, K), gamma_L) ;
-  }
+  // for(j in 1:J){
+  //   deltas[j, ] ~ multi_normal_cholesky(rep_vector(0, K), diag_pre_multiply(delta_psi, delta_L)) ;
+  // }
   y ~ normal(linear_predictor, y_sigma) ;
 }
 generated quantities{

@@ -19,7 +19,7 @@ colMeans(m1_posterior$gamma_psi)
 plot(fm_simulation_1[[1]]$y, colMeans(m1_posterior$y_pred))
 ppc_dens_overlay(y = fm_simulation_1[[1]]$y, yrep = m1_posterior$y_pred[seq(1, 1000, 10), ])
 
-ppc_dens_overlay(y = as.numeric(fm_simulation_1[[2]]$linear_predictor), 
+  ppc_dens_overlay(y = as.numeric(fm_simulation_1[[2]]$linear_predictor), 
                  yrep = m1_posterior$linear_predictor[seq(1, 1000, 10), ])
 
 m2_fit <- sampling(m1, 
@@ -29,7 +29,7 @@ m2_fit <- sampling(m1,
 )
 m2_fit <- vb(m1, 
              data = ife_simulation_2[[1]], 
-             tol_rel_obj = 1e-2, seed = 123
+             tol_rel_obj = 1e-3, seed = 123
 )
 # posterior predictive check
 m2_posterior <- extract(m2_fit)
