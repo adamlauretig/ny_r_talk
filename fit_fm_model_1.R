@@ -21,3 +21,4 @@ m2_fit <- sampling(m1,
 # posterior predictive check
 m2_posterior <- extract(m2_fit)
 ppc_dens_overlay(y = fm_simulation_2[[1]]$y, yrep = m2_posterior$y_pred[seq(1, 4000, 10), ])
+save(m1_fit, m2_fit, file = "simple_fm.rdata")

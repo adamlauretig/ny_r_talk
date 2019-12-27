@@ -1,5 +1,5 @@
 ---
-title: "Identification, Inference, and Prediction"
+title: "Bayesian Factorization Machines with Stan and R"
 author: "Adam M. Lauretig"
 date: "12/18/2019"
 output: beamer_presentation
@@ -18,15 +18,18 @@ knitr::knit_hooks$set(chunk = function(x, options) {
 
 ## Welcome
  
-- Talk: Parameter identification, what it means for inference and prediction
-- Latent Variable Models: Factorization Machines, Interactive Fixed Effects
+- Talk: Factorization machines:
+  - What are they?
+  - How do we fit them?
 - Stan code $+$ simulations!
+  - Start with simple model
+  - Next, hierarchical model
 
 ## Who I Am
 
-- Data Scientist
-- Previously, Ph.D. in political science (at THE Ohio State University)
-- Word Embeddings, Causal Inference, Bayesian Statistics
+- Senior Data Scientist, JUST Capital
+- Previously, Ph.D. in political science (at The Ohio State University)
+- Word Embeddings, Causal Inference, Bayesian Statistics, Discrete Choice Models
  
 ## Why We Model
 
@@ -35,29 +38,21 @@ knitr::knit_hooks$set(chunk = function(x, options) {
 - Causal Inference: does changing $\pmb{X}$, change $\pmb{y}$?
 - Shameless plug: Book Chapter **insert link**
 
-
-## Parameter Identification
-
-- Unique solution to the model
-- Necessary for causal inference
-- Allows for uncertainty and interpretability
-
-
-## Latent Variable Models
+## Latent Variable Models/Unsupervised models
 
 - Learning parameters to reconstruct observed data
-- Ex: Principal Components Analysis, Factor Analysis, Word2vec, etc
+- Ex: Principal Components Analysis, Factor Analysis, Matrix Factorization, etc
 - Data $\pmb{X}_{N \times J}$ is decomposed into two low rank matrices: $\pmb{\gamma}_{N \times K}$ and $\pmb{\delta}_{K \times J}$
 - Various assumptions about the structure of $\pmb{\gamma}$ and $\pmb{\delta}$
 
 
-## Factorization Machines/Interactive Fixed Effects
+## Factorization Machines
 
 - Combine regression with a latent variable model on the residuals
 
 # But Why?
 
-## Factorization Machines/Interactive Fixed Effects
+## Factorization Machines
 
 
 
@@ -68,7 +63,7 @@ knitr::knit_hooks$set(chunk = function(x, options) {
 <!-- - Error $\varepsilon_{nj}$ -->
 $$ y_{nj} = \pmb{x}_{n} \beta_{1} + \pmb{x}_{j} \beta_{2} + \varepsilon_{nj} $$
 
-```{r, chunk_1, eval = FALSE, echo = TRUE, size = 'small'}
+```{r, chunk_1, eval = FALSE, echo = TRUE, size = 'tiny'}
 m1 <- lm(y ~ factor(group_1) + factor(group_2))
 ```
 
@@ -77,18 +72,19 @@ m1 <- lm(y ~ factor(group_1) + factor(group_2))
 
 $$ y_{nj} = \pmb{x}_{n} \beta_{1} + \pmb{x}_{j} \beta_{2} + \pmb{x}_{n} \times  \pmb{x}_{j} \beta_{3} + \varepsilon_{nj} $$
 
-```{r, chunk_2, eval = FALSE, echo = TRUE, size = 'small'}
-m1 <- lm(y ~ factor(group_1) * factor(group_2))
+```{r, chunk_2, eval = FALSE, echo = TRUE, size = 'tiny'}
+m1 <- lm(y ~ factor(group_1) + factor(group_2) + factor(group_1) * factor(group_2))
 ```
 
-## Factorization Machines/Interactive Fixed Effects
+## Factorization Machines
 
-Problems!
+**Problems:**
+
 - We can only estimate $\beta_{3}$ for observed interactions
-- As $N$ and $J$ grow, $\beta_{3}$ increases $N*J$
+- As $N$ and $J$ grow, $\beta_{3}$ increases with size $N*J$
 
 
-## Factorization Machines/Interactive Fixed Effects
+## Factorization Machines
 
 Solution!
 
@@ -98,26 +94,24 @@ Solution!
 
 - $\beta_{3}$ is now $\gamma_{n} \cdot \delta_{j}^{\top}$
 
-## Factorization Machines/Interactive Fixed Effects
+## Factorization Machines
 
 - Interaction model:
-$$ y_{nj} = \pmb{x}_{n} \beta_{1} + \pmb{x}_{j} \beta_{2} + \gamma_{n} \cdot \delta_{j}^{\top} + \varepsilon_{nj} $$
-- Depending on our assumptions about  $\gamma_{n} \cdot \delta_{j}^{\top}$, we can now create FMs or IFEs
+$$ y_{nj} = \pmb{x}_{n} \beta_{1} + \pmb{x}_{j} \beta_{2} + \pmb{\gamma}_{n} \cdot \pmb{\delta_{j}}^{\top} + \varepsilon_{nj} $$
+- Depending on our assumptions about  $\gamma_{n} \cdot \delta_{j}^{\top}$, we can now create FMs
 
 ## Factorization Machines
 
-- Each element of $\delta_{j}$ and $\gamma_{n}$ is Normally distributed
+Basic model
+- Each element of $\delta_{j}$ and $\gamma_{n}$ is distributed standard normal: $\mathcal{N}(0, 1)$
 - Automatic Relevance Determination (ARD) prior to shrink the matrix rank
 
 
 \begin{align*}
-y_{nj} &\sim N( \pmb{x}_{n} \beta_{1} + \pmb{x}_{j} \beta_{2} + \gamma_{n} \cdot \delta_{j}^{\top}, 1) \\
-\pmb{\beta} &\sim N(0, \sigma^{2}) \\
-\gamma_{n,k} &\sim N(0, \psi_{k}) \\
-\delta_{j,k} &\sim N(0, 1) \\
-\psi_{k} &\sim \text{Gam}(a, b) \\
-a &\sim \text{Gam}(1, 1) \\
-b &\sim \text{Gam}(1, 1) \\
+y_{nj} &\sim \mathcal{N}( \pmb{x}_{n} \beta_{1} + \pmb{x}_{j} \beta_{2} + \gamma_{n} \cdot \delta_{j}^{\top}, 1) \\
+\pmb{\beta} &\sim \mathcal{N}(0, \sigma^{2}) \\
+\gamma_{n,k} &\sim \mathcal{N}(0,1) \\
+\delta_{j,k} &\sim \mathcal{N}(0, 1) \\
 \end{align*}
 
 
@@ -160,35 +154,33 @@ linear_predictor <- X_mat %*% betas
 Next, latent factors:
 ```{r simulate_fm2, echo = TRUE, eval = FALSE, size = "tiny"}
 # group_1 factors are gammas
-a <- rgamma(1, shape = gamma_a_1, rate = gamma_a_2)
-b <- rgamma(1, shape = gamma_b_1, rate = gamma_b_2)
-
-gamma_psi <- sort(rgamma(n = K, shape = a, rate = b), decreasing = FALSE)
 gammas <- mvrnorm(
-  n = N, mu = rep(0, K), Sigma = gamma_psi * diag(K))
+  n = N,
+  mu = rep(0, K),
+  Sigma = diag(K))
 
 # group 2 factors are deltas
-
 deltas <- mvrnorm(
-  n = J, mu = rep(0, K), Sigma = diag(K))
+  n = J,
+  mu = rep(0, K),
+  Sigma = diag(K))
 
-factor_terms <- matrix(NA, nrow = nrow(linear_predictor), ncol = 1)
+factor_terms <-
+  matrix(NA, nrow = nrow(linear_predictor), ncol = 1)
 
-for(i in 1:nrow(predictors)){
+for (i in 1:nrow(predictors)) {
   g1 <- as.character(predictors[i, 1])
   g1 <- as.numeric(substr(g1, 2, nchar(g1)))
   
   g2 <- as.character(predictors[i, 2])
   g2 <- as.numeric(substr(g2, 2, nchar(g2)))
   
-  factor_terms[i, ] <- matrix(
-    gammas[g1, ], nrow = 1) %*% 
-    matrix(deltas[g2, ], ncol = 1)
+  factor_terms[i,] <- matrix(gammas[g1,], nrow = 1) %*%
+    matrix(deltas[g2,], ncol = 1)
 }
 
-y <- linear_predictor + factor_terms + rnorm(
-  n = nrow(linear_predictor), 0, y_sigma)
-    
+y <- linear_predictor + factor_terms + rnorm(n = nrow(linear_predictor), 0, y_sigma)
+
 ```
 
   
@@ -199,7 +191,7 @@ Use Stan to fit FMs:
 
  - Data:
 
-```{stan output.var= "stan_fm1", echo = TRUE, eval = FALSE, size = "tiny"}
+```{stan output.var= "stan_fm1_1", echo = TRUE, eval = FALSE, size = "tiny"}
 data{
   int<lower = 0> N ; // number of group 1 observations
   int<lower = 0> J ; // number of group 2 observations
@@ -208,13 +200,7 @@ data{
   vector[(N*J)] y ; // outcome
   real<lower = 0> beta_sigma ; // sd on regression coefficients
   real<lower = 0> y_sigma ; // sd on the outcome, y
-  real<lower = 0> a_hyperprior_1 ; //ARD hyperprior
-  real<lower = 0> a_hyperprior_2 ; //ARD hyperprior
-  real<lower = 0> b_hyperprior_1 ; //ARD hyperprior
-  real<lower = 0> b_hyperprior_2 ; //ARD hyperprior
 }
-
-
 ```
 
 ## Factorization Machines in Stan
@@ -224,25 +210,22 @@ Use Stan to fit FMs:
  - Parameters:
 
 
-```{stan output.var= "stan_fm2", echo = TRUE, eval = FALSE, size = "tiny"}
+```{stan output.var= "stan_fm1_2", echo = TRUE, eval = FALSE, size = "tiny"}
 parameters{
   vector[N] group_1_betas; // non-interacted coefficients
   vector[J] group_2_betas; // non-interacted coefficients
   matrix[N, K] gammas; // individual factors
   matrix[J, K] deltas; // group 2 factors
-  positive_ordered[K] gamma_sd; //gamma prior sd
-  real<lower = 0> a; // gamma hyperprior a
-  real<lower = 0> b; // gamma hyperprior b
 }
 
 transformed parameters{
-  vector[(N*J)] linear_predictor ;
+  real linear_predictor[(N*J)] ;
   for(i in 1:(N*J)){
-    linear_predictor[i] = group_1_betas[X[i, 1]] + group_2_betas[X[i, 2]] + 
-    (gammas[X[i, 1], ]  * deltas[ X[i, 2], ]');
+    linear_predictor[i] = 
+      group_1_betas[X[i, 1]] + group_2_betas[X[i, 2]] + 
+      (gammas[X[i, 1], ]  * deltas[ X[i, 2], ]');
   }
 }
-
 ```
 
 
@@ -251,31 +234,38 @@ transformed parameters{
 Use Stan to fit FMs:
 
  - Model:
-```{stan output.var= "stan_fm3", echo = TRUE, eval = FALSE, size = "tiny"}
+```{stan output.var= "stan_fm1_3", echo = TRUE, eval = FALSE, size = "tiny"}
 model{
   
   // regression coefficients
   group_1_betas ~ normal(0, beta_sigma) ;
   group_2_betas ~ normal(0, beta_sigma) ;
-  
-  // ARD prior
-  a ~ gamma(a_hyperprior_1, a_hyperprior_2) ;
-  b ~ gamma(b_hyperprior_1, b_hyperprior_2) ;
-  gamma_sd ~ gamma( a, b) ;
 
   // latent factors
   for(n in 1:N){
-    gammas[n, ] ~ normal(rep_vector(0, K), gamma_sd) ;
+    gammas[n, ] ~ normal(rep_vector(0, K), 1) ;
   }
   
-    for(j in 1:J){
+  for(j in 1:J){
     deltas[j, ] ~ normal(rep_vector(0, K), 1) ;
   }
   
   // outcome
   y ~ normal(linear_predictor, y_sigma) ;
 }
+```
 
+## Factorization Machines in Stan
+
+Use Stan to fit FMs:
+
+- Model Checking
+```{stan output.var= "stan_fm1_4", echo = TRUE, eval = FALSE, size = "tiny"}
+
+generated quantities{
+  real y_pred[(N*J)]  ;
+  y_pred = normal_rng(linear_predictor, y_sigma) ;
+}
 ```
 
 
@@ -285,5 +275,57 @@ model{
 - Two versions:
 - 100 members of group 1, 20 members of group 2
 - 20 members of group 1, 100 members of group 2
-- Fit model in `stan`, using `vb()` (note: you can also use `NUTS` for this)
+- Fit model in `stan`, using `NUTS`
 
+## Fitting a Model to Simulated Data
+
+```{r, stan_fm1_4, echo = FALSE, message=FALSE, error=FALSE, warning=FALSE, fig.height= 4, dpi = 320 }
+library(rstan)
+library(bayesplot)
+library(cowplot)
+load("simulated_data.rdata")
+load("simple_fm.rdata")
+color_scheme_set("red")
+
+m1_posterior <- extract(m1_fit)
+p1 <- ppc_dens_overlay(y = fm_simulation_1[[1]]$y, yrep = m1_posterior$y_pred[seq(1, 4000, 10), ]) + labs(title = "Model 1 Posterior Predictive")
+m2_posterior <- extract(m2_fit)
+p2 <- ppc_dens_overlay(y = fm_simulation_2[[1]]$y, yrep = m2_posterior$y_pred[seq(1, 4000, 10), ]) + labs(title = "Model 2 Posterior Predictive")
+
+plot_grid(p1, p2, align = "h")
+
+
+```
+
+
+## Fitting a Model to Simulated Data
+
+**TODO: MSE Here!**
+
+# Now, Let's Get Hierarchical!
+
+## Hierarchical Factorization Machines
+
+- Basic FM implementation assumes all parameters are independent
+- Hierarchical: Sharing parameters across groups
+- Sharing parameters $ = $ sharing infomation!
+
+
+## Hierarchical Factorization Machines
+
+\begin{align*}
+y_{nj} &\sim \mathcal{N}( \pmb{x}_{n} \beta_{1} + \pmb{x}_{j} \beta_{2} + \gamma_{n} \cdot \delta_{j}^{\top}, \sigma_{y}) \\
+\pmb{\beta} &\sim \mathcal{N}(0, \sigma_{\beta}) \\
+\gamma_{n,} &\sim \mathcal{N}(\pmb{\mu}_{\pmb{\gamma}}, \pmb{\Sigma}_{\pmb{\gamma}}) \\
+\delta_{j,} &\sim \mathcal{N}(\pmb{\mu}_{\pmb{\delta}}, \pmb{\Sigma}_{\pmb{\delta}}) \\
+{\mu}_{\pmb{\gamma}} &\sim \mathcal{N}(0, 1) \\
+{\mu}_{\pmb{\delta}} &\sim \mathcal{N}(0, 1) \\
+\pmb{\Sigma}_{\pmb{\gamma}} &= \pmb{\sigma}_{\pmb{\gamma}} \pmb{\Omega}_{\pmb{\gamma}} \\
+\pmb{\Sigma}_{\pmb{\delta}} &= \pmb{\sigma}_{\pmb{\delta}} \pmb{\Omega}_{\pmb{\delta}} \\
+\end{align*}
+
+## Hierarchical Factorization Machines in Stan
+
+```{stan output.var= "stan_fm2_1", echo = TRUE, eval = FALSE, size = "tiny"}
+
+```

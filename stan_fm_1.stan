@@ -3,7 +3,7 @@ data{
   int<lower = 0> J ; // number of group 2 observations
   int<lower = 0> K ; // number of latent dimensions
   int X[(N*J), 2]  ; // covariate matrix
-  vector[(N*J)] y ; // outcome
+  vector [(N*J)] y ; // outcome
   real<lower = 0> beta_sigma ; // sd on regression coefficients
   real<lower = 0> y_sigma ; // sd on the outcome, y
 }
@@ -30,20 +30,22 @@ model{
   group_1_betas ~ normal(0, beta_sigma) ;
   group_2_betas ~ normal(0, beta_sigma) ;
 
-
   // latent factors
   for(n in 1:N){
     gammas[n, ] ~ normal(rep_vector(0, K), 1) ;
   }
   
-    for(j in 1:J){
+  for(j in 1:J){
     deltas[j, ] ~ normal(rep_vector(0, K), 1) ;
   }
   
   // outcome
-  y ~ normal(linear_predictor, y_sigma) ;
+  to_vector(y) ~ normal(linear_predictor, y_sigma) ;
 }
 generated quantities{
   real y_pred[(N*J)]  ;
+  // real mse ;
+  
   y_pred = normal_rng(linear_predictor, y_sigma) ;
+  // mse = ((y - y_pred)**2)/(N*J)
 }
