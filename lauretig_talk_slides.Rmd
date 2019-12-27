@@ -279,7 +279,7 @@ generated quantities{
 
 ## Fitting a Model to Simulated Data
 
-```{r, stan_fm1_4, echo = FALSE, message=FALSE, error=FALSE, warning=FALSE, fig.height= 4, dpi = 320 }
+```{r, stan_fm1_5, echo = FALSE, message=FALSE, error=FALSE, warning=FALSE, fig.height= 4, dpi = 640 }
 library(rstan)
 library(bayesplot)
 library(cowplot)
@@ -300,7 +300,29 @@ plot_grid(p1, p2, align = "h")
 
 ## Fitting a Model to Simulated Data
 
-**TODO: MSE Here!**
+
+
+```{r, stan_fm1_6, echo = FALSE, message=FALSE, error=FALSE, warning=FALSE, fig.height= 4, dpi = 640}
+library(rstan)
+library(ggplot2)
+load("simulated_data.rdata")
+load("simple_fm.rdata")
+m1_posterior <- extract(m1_fit)
+m2_posterior <- extract(m2_fit)
+
+mse <- function(y_pred, y_actual){
+  mean((y_actual - y_pred)^2)
+}
+
+m1_mse <- apply(X = m1_posterior$y_pred, MARGIN = 1, FUN = mse, y_actual = fm_simulation_1[[1]]$y)
+m2_mse <- apply(X = m2_posterior$y_pred, MARGIN = 1, FUN = mse, y_actual = fm_simulation_2[[1]]$y)
+combined <- rbind(data.frame(varname = "Model 1 Mean Squared Error", mse = m1_mse),
+data.frame(varname = "Model 2 Mean Squared Error", mse = m2_mse))
+
+ggplot(data = combined, aes(mse)) + geom_density() + facet_wrap(~varname)
+# TODO: make this pretty
+```
+
 
 # Now, Let's Get Hierarchical!
 
@@ -327,5 +349,56 @@ y_{nj} &\sim \mathcal{N}( \pmb{x}_{n} \beta_{1} + \pmb{x}_{j} \beta_{2} + \gamma
 ## Hierarchical Factorization Machines in Stan
 
 ```{stan output.var= "stan_fm2_1", echo = TRUE, eval = FALSE, size = "tiny"}
+data{
+  int<lower = 0> N ; // number of group 1 observations
+  int<lower = 0> J ; // number of group 2 observations
+  int<lower = 0> K ; // number of latent dimensions
+  int X[(N*J), 2]  ; // covariate matrix
+  vector[(N*J)] y ; // outcome
+  real<lower = 0> beta_sigma ; // sd on regression coefficients
+  real<lower = 0> y_sigma ; // sd on the outcome, y
+  real<lower = 0> gamma_sigma_prior ; //sd on gamma factors
+  real<lower = 0> delta_sigma_prior ; //sd on gamma factors
+}
+```
 
+## Hierarchical Factorization Machines in Stan
+
+```{stan output.var= "stan_fm2_2", echo = TRUE, eval = FALSE, size = "tiny"}
+parameters{
+  vector[N] group_1_betas; // non-interacted coefficients
+  vector[J] group_2_betas; // non-interacted coefficients
+  // matrix[N, K] gammas; // individual factors
+  // matrix[J, K] deltas; // group 2 factors
+  matrix[N, K] gamma_mu ; //gamma prior mean
+  vector<lower=0, upper=pi()/2>[K] gamma_sigma_unif ; // reparameterized Cauchy
+  cholesky_factor_corr[K] gamma_omega; // correlation matrix
+  matrix[K, N] gamma_a ; // for non-centered parameterization
+  matrix[J , K] delta_mu ; //delta prior mean
+  vector<lower=0, upper=pi()/2>[K] delta_sigma_unif ; // reparameterized Cauchy
+  cholesky_factor_corr[K] delta_omega; // correlation matrix
+  matrix[K, J] delta_a ; // for non-centered parameterization
+}
+
+transformed parameters{
+  real linear_predictor[(N*J)] ;
+  vector<lower=0>[K] gamma_sigma ;
+  matrix[N, K] gammas ;
+  vector<lower=0>[K] delta_sigma;
+  matrix[J, K] deltas ;
+  for (k in 1:K) {
+    gamma_sigma[k] = gamma_sigma_prior .* tan(gamma_sigma_unif[k]) ; // reparameterized cauchy
+  }
+  for (k in 1:K) {
+    delta_sigma[k] = delta_sigma_prior .* tan(delta_sigma_unif[k]) ; // reparameterized cauchy
+  }
+  // non-centered parameterization
+  gammas = gamma_mu + (diag_pre_multiply(gamma_sigma, gamma_omega) * gamma_a)' ; 
+  deltas = delta_mu + (diag_pre_multiply(delta_sigma, delta_omega) * delta_a)' ;
+  for(i in 1:(N*J)){
+    linear_predictor[i] = 
+      group_1_betas[X[i, 1]] + group_2_betas[X[i, 2]] + 
+      (gammas[X[i, 1], ]  * deltas[ X[i, 2], ]');
+  }
+}
 ```
