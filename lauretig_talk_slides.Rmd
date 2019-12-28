@@ -28,7 +28,7 @@ knitr::knit_hooks$set(chunk = function(x, options) {
 ## Who I Am
 
 - Senior Data Scientist, JUST Capital
-- Previously, Ph.D. in political science (The Ohio State University)
+- Ph.D. in Political Science (The Ohio State University); B.A. in Political Science (Grinnell College)
 - Word Embeddings, Causal Inference, Bayesian Statistics, Discrete Choice Models
  
 ## Why We Model
@@ -286,9 +286,9 @@ load("simple_fm.rdata")
 color_scheme_set("red")
 
 m1_posterior <- extract(m1_fit)
-p1 <- ppc_dens_overlay(y = fm_simulation_1[[1]]$y, yrep = m1_posterior$y_pred[seq(1, 4000, 10), ]) + labs(title = "Model 1 Posterior Predictive")
+p1 <- ppc_dens_overlay(y = fm_simulation_1[[1]]$y, yrep = m1_posterior$y_pred[seq(1, 4000, 10), ]) + labs(title = "Model 1 Posterior Predictive Check")
 m2_posterior <- extract(m2_fit)
-p2 <- ppc_dens_overlay(y = fm_simulation_2[[1]]$y, yrep = m2_posterior$y_pred[seq(1, 4000, 10), ]) + labs(title = "Model 2 Posterior Predictive")
+p2 <- ppc_dens_overlay(y = fm_simulation_2[[1]]$y, yrep = m2_posterior$y_pred[seq(1, 4000, 10), ]) + labs(title = "Model 2 Posterior Predictive Check")
 
 plot_grid(p1, p2, align = "h")
 
@@ -316,7 +316,9 @@ m2_mse <- apply(X = m2_posterior$y_pred, MARGIN = 1, FUN = mse, y_actual = fm_si
 combined <- rbind(data.frame(varname = "Model 1 Mean Squared Error", mse = m1_mse),
 data.frame(varname = "Model 2 Mean Squared Error", mse = m2_mse))
 
-ggplot(data = combined, aes(mse)) + geom_density() + facet_wrap(~varname)
+ggplot(data = combined, aes(mse)) + geom_density() + 
+  facet_wrap(~varname) + 
+  theme_minimal() + theme(panel.grid = element_blank())
 # TODO: make this pretty
 ```
 
@@ -362,6 +364,9 @@ data{
   real<lower = 0> y_sigma ; // sd on the outcome, y
   real<lower = 0> gamma_sigma_prior ; //sd on gamma factors
   real<lower = 0> delta_sigma_prior ; //sd on gamma factors
+  real<lower = 0> gamma_omega_prior ; // prior on omega value for gamma
+  real<lower = 0> delta_omega_prior ; // prior on omega value for gamma
+
 }
 ```
 
@@ -375,12 +380,12 @@ parameters{
   vector[J] group_2_betas; // non-interacted coefficients
   
   matrix[N, K] gamma_mu ; //gamma prior mean
-  vector<lower=0, upper=pi()/2>[K] gamma_sigma_unif ; // for reparameterized Cauchy
+  vector<lower=0>[K] gamma_sigma ; // embedding SD
   cholesky_factor_corr[K] gamma_omega; // correlation matrix
   matrix[K, N] gamma_a ; // for non-centered parameterization
   
   matrix[J , K] delta_mu ; //delta prior mean
-  vector<lower=0, upper=pi()/2>[K] delta_sigma_unif ; // for reparameterized Cauchy
+  vector<lower=0>[K] delta_sigma ; // embedding SD
   cholesky_factor_corr[K] delta_omega; // correlation matrix
   matrix[K, J] delta_a ; // for non-centered parameterization
 }
@@ -395,23 +400,12 @@ parameters{
 
 transformed parameters{
   real linear_predictor[(N*J)] ;
-  vector<lower=0>[K] gamma_sigma ;
   matrix[N, K] gammas ;
-  vector<lower=0>[K] delta_sigma;
   matrix[J, K] deltas ;
-  
-  // reparameterized cauchy
-  for (k in 1:K) {
-    gamma_sigma[k] = gamma_sigma_prior .* tan(gamma_sigma_unif[k]) ; 
-  }
-  for (k in 1:K) {
-    delta_sigma[k] = delta_sigma_prior .* tan(delta_sigma_unif[k]) ; 
-  }
-  
-  // non-centered parameterization
-  gammas = gamma_mu + (diag_pre_multiply(gamma_sigma, gamma_omega) * gamma_a)' ; 
+
+  gammas = gamma_mu + (diag_pre_multiply(gamma_sigma, gamma_omega) * gamma_a)' ;
   deltas = delta_mu + (diag_pre_multiply(delta_sigma, delta_omega) * delta_a)' ;
-  
+
   for(i in 1:(N*J)){
     linear_predictor[i] = 
       group_1_betas[X[i, 1]] + group_2_betas[X[i, 2]] + 
@@ -432,9 +426,12 @@ model{
   group_1_betas ~ normal(0, beta_sigma) ;
   group_2_betas ~ normal(0, beta_sigma) ;
 
+  gamma_sigma ~ normal(0, gamma_sigma_prior) ; 
+  delta_sigma ~ normal(0, delta_sigma_prior) ; 
+
   // correlation matrices
-  gamma_omega ~ lkj_corr_cholesky(5) ;
-  delta_omega ~ lkj_corr_cholesky(5) ;
+  gamma_omega ~ lkj_corr_cholesky(gamma_omega_prior) ;
+  delta_omega ~ lkj_corr_cholesky(delta_omega_prior) ;
   
   // for non-centered parameterization
   to_vector(gamma_a) ~ std_normal() ;

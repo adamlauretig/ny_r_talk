@@ -17,31 +17,24 @@ data{
 parameters{
   vector[N] group_1_betas; // non-interacted coefficients
   vector[J] group_2_betas; // non-interacted coefficients
-  // matrix[N, K] gammas; // individual factors
-  // matrix[J, K] deltas; // group 2 factors
+  
   matrix[N, K] gamma_mu ; //gamma prior mean
-  vector<lower=0, upper=pi()/2>[K] gamma_sigma_unif ; // reparameterized Cauchy
+  vector<lower=0>[K] gamma_sigma ; // embedding SD
   cholesky_factor_corr[K] gamma_omega; // correlation matrix
   matrix[K, N] gamma_a ; // for non-centered parameterization
+  
   matrix[J , K] delta_mu ; //delta prior mean
-  vector<lower=0, upper=pi()/2>[K] delta_sigma_unif ; // reparameterized Cauchy
+  vector<lower=0>[K] delta_sigma ; // embedding SD
   cholesky_factor_corr[K] delta_omega; // correlation matrix
   matrix[K, J] delta_a ; // for non-centered parameterization
 }
 
 transformed parameters{
   real linear_predictor[(N*J)] ;
-  vector<lower=0>[K] gamma_sigma ;
   matrix[N, K] gammas ;
-  vector<lower=0>[K] delta_sigma;
   matrix[J, K] deltas ;
-  for (k in 1:K) {
-    gamma_sigma[k] = gamma_sigma_prior .* tan(gamma_sigma_unif[k]) ; // reparameterized cauchy
-  }
-  for (k in 1:K) {
-    delta_sigma[k] = delta_sigma_prior .* tan(delta_sigma_unif[k]) ; // reparameterized cauchy
-  }
-  gammas = gamma_mu + (diag_pre_multiply(gamma_sigma, gamma_omega) * gamma_a)' ; //TODO: fix dimensions here
+
+  gammas = gamma_mu + (diag_pre_multiply(gamma_sigma, gamma_omega) * gamma_a)' ;
   deltas = delta_mu + (diag_pre_multiply(delta_sigma, delta_omega) * delta_a)' ;
 
   for(i in 1:(N*J)){
@@ -56,6 +49,9 @@ model{
   // regression coefficients
   group_1_betas ~ normal(0, beta_sigma) ;
   group_2_betas ~ normal(0, beta_sigma) ;
+
+  gamma_sigma ~ normal(0, gamma_sigma_prior) ; 
+  delta_sigma ~ normal(0, delta_sigma_prior) ; 
 
   // correlation matrices
   gamma_omega ~ lkj_corr_cholesky(gamma_omega_prior) ;
