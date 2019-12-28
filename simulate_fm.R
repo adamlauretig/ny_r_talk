@@ -6,10 +6,13 @@
 
 library(MASS)
 library(Matrix)
-
+# install with devtools::install_github("rmcelreath/rethinking")
+library(rethinking) 
+library(extraDistr)
 simulate_data <- function(
   seed_to_use = 123, N = 5, J = 5, K = 1, simple_fm = FALSE, 
-  beta_sigma = 3, y_sigma = 1){
+  beta_sigma = 3, y_sigma = 1, 
+  gamma_sigma_prior = 1, delta_sigma_prior = 1, gamma_omega_prior = 5, delta_omega_prior = 5){
   set.seed(seed_to_use)
   # number of levels for first covariate
   N <- N
@@ -37,12 +40,16 @@ simulate_data <- function(
   # simple_fm ----
   if(simple_fm == TRUE){
     # group_1 factors are gammas
+    
+    gamma_omega <- rlkjcorr(n = 1, K = K, eta = gamma_omega_prior)  
+    delta_omega <- rlkjcorr(n = 1, K = K, eta = delta_omega_prior)
+    
     gammas <- mvrnorm(
-      n = N, mu = rep(0, K), Sigma = diag(K))
+      n = N, mu = rep(0, K), Sigma = gamma_omega)
     
     # group 2 factors are deltas
     deltas <- mvrnorm(
-      n = J, mu = rep(0, K), Sigma = diag(K))
+      n = J, mu = rep(0, K), Sigma = delta_omega)
     
     factor_terms <- matrix(NA, nrow = nrow(linear_predictor), ncol = 1)
     
@@ -63,10 +70,16 @@ simulate_data <- function(
     
     data_list <- list(
       N = N, J = J, K = K, X = predictors_as_numeric, y = as.numeric(y),
-      beta_sigma = beta_sigma, y_sigma = y_sigma
+      beta_sigma = beta_sigma, y_sigma = y_sigma, 
+      gamma_sigma_prior = gamma_sigma_prior, 
+      delta_sigma_prior = delta_sigma_prior, 
+      gamma_omega_prior = gamma_omega_prior, 
+      delta_omega_prior = delta_omega_prior
     )
     params_list <- list(betas = betas, gammas = gammas, deltas = deltas, 
       factor_terms = factor_terms, 
+      sigma_gamma = sigma_gamma, sigma_delta = sigma_delta, 
+      gamma_omega = gamma_omega, delta_omega = delta_omega,
       linear_predictor = linear_predictor)
     return(list(data_list, params_list))
   }

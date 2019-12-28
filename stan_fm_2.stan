@@ -9,6 +9,8 @@ data{
   real<lower = 0> y_sigma ; // sd on the outcome, y
   real<lower = 0> gamma_sigma_prior ; //sd on gamma factors
   real<lower = 0> delta_sigma_prior ; //sd on gamma factors
+  real<lower = 0> gamma_omega_prior ; // prior on omega value for gamma
+  real<lower = 0> delta_omega_prior ; // prior on omega value for gamma
 
 }
 
@@ -55,20 +57,22 @@ model{
   group_1_betas ~ normal(0, beta_sigma) ;
   group_2_betas ~ normal(0, beta_sigma) ;
 
-  gamma_omega ~ lkj_corr_cholesky(5) ;
-  delta_omega ~ lkj_corr_cholesky(5) ;
-  // gamma_sigma_unif ~ uniform(0, pi()/2) ;
-  // delta_sigma_unif ~ uniform(0, pi()/2) ;
+  // correlation matrices
+  gamma_omega ~ lkj_corr_cholesky(gamma_omega_prior) ;
+  delta_omega ~ lkj_corr_cholesky(delta_omega_prior) ;
+  
+  // for non-centered parameterization
   to_vector(gamma_a) ~ std_normal() ;
   to_vector(delta_a) ~ std_normal() ;
   
+  
+  // hierarchical means
   for(n in 1:N){
     gamma_mu[n, ] ~ normal(0, 1) ;
   }  
   for(j in 1:J){
     delta_mu[j, ] ~ normal(0, 1) ;
   }
-  
   
   // outcome
   y ~ normal(linear_predictor, y_sigma) ;

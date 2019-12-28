@@ -28,7 +28,7 @@ knitr::knit_hooks$set(chunk = function(x, options) {
 ## Who I Am
 
 - Senior Data Scientist, JUST Capital
-- Previously, Ph.D. in political science (at The Ohio State University)
+- Previously, Ph.D. in political science (The Ohio State University)
 - Word Embeddings, Causal Inference, Bayesian Statistics, Discrete Choice Models
  
 ## Why We Model
@@ -98,17 +98,15 @@ Solution!
 
 - Interaction model:
 $$ y_{nj} = \pmb{x}_{n} \beta_{1} + \pmb{x}_{j} \beta_{2} + \pmb{\gamma}_{n} \cdot \pmb{\delta_{j}}^{\top} + \varepsilon_{nj} $$
-- Depending on our assumptions about  $\gamma_{n} \cdot \delta_{j}^{\top}$, we can now create FMs
 
 ## Factorization Machines
 
 Basic model
 - Each element of $\delta_{j}$ and $\gamma_{n}$ is distributed standard normal: $\mathcal{N}(0, 1)$
-- Automatic Relevance Determination (ARD) prior to shrink the matrix rank
 
 
 \begin{align*}
-y_{nj} &\sim \mathcal{N}( \pmb{x}_{n} \beta_{1} + \pmb{x}_{j} \beta_{2} + \gamma_{n} \cdot \delta_{j}^{\top}, 1) \\
+y_{nj} &\sim \mathcal{N}( \pmb{x}_{n} \beta_{1} + \pmb{x}_{j} \beta_{2} +\pmb{\gamma}_{n} \cdot \pmb{\delta}_{j}^{\top}, 1) \\
 \pmb{\beta} &\sim \mathcal{N}(0, \sigma^{2}) \\
 \gamma_{n,k} &\sim \mathcal{N}(0,1) \\
 \delta_{j,k} &\sim \mathcal{N}(0, 1) \\
@@ -279,7 +277,7 @@ generated quantities{
 
 ## Fitting a Model to Simulated Data
 
-```{r, stan_fm1_5, echo = FALSE, message=FALSE, error=FALSE, warning=FALSE, fig.height= 4, dpi = 640 }
+```{r, stan_fm1_5, echo = FALSE, message=FALSE, error=FALSE, warning=FALSE, fig.height= 4, dpi = 640, cache = TRUE }
 library(rstan)
 library(bayesplot)
 library(cowplot)
@@ -301,8 +299,7 @@ plot_grid(p1, p2, align = "h")
 ## Fitting a Model to Simulated Data
 
 
-
-```{r, stan_fm1_6, echo = FALSE, message=FALSE, error=FALSE, warning=FALSE, fig.height= 4, dpi = 640}
+```{r, stan_fm1_6, echo = FALSE, message=FALSE, error=FALSE, warning=FALSE, fig.height= 4, dpi = 640, cache=TRUE}
 library(rstan)
 library(ggplot2)
 load("simulated_data.rdata")
@@ -336,7 +333,7 @@ ggplot(data = combined, aes(mse)) + geom_density() + facet_wrap(~varname)
 ## Hierarchical Factorization Machines
 
 \begin{align*}
-y_{nj} &\sim \mathcal{N}( \pmb{x}_{n} \beta_{1} + \pmb{x}_{j} \beta_{2} + \gamma_{n} \cdot \delta_{j}^{\top}, \sigma_{y}) \\
+y_{nj} &\sim \mathcal{N}( \pmb{x}_{n} \beta_{1} + \pmb{x}_{j} \beta_{2} + \pmb{\gamma}_{n} \cdot \pmb{\delta}_{j}^{\top}, \sigma_{y}) \\
 \pmb{\beta} &\sim \mathcal{N}(0, \sigma_{\beta}) \\
 \gamma_{n,} &\sim \mathcal{N}(\pmb{\mu}_{\pmb{\gamma}}, \pmb{\Sigma}_{\pmb{\gamma}}) \\
 \delta_{j,} &\sim \mathcal{N}(\pmb{\mu}_{\pmb{\delta}}, \pmb{\Sigma}_{\pmb{\delta}}) \\
@@ -344,9 +341,15 @@ y_{nj} &\sim \mathcal{N}( \pmb{x}_{n} \beta_{1} + \pmb{x}_{j} \beta_{2} + \gamma
 {\mu}_{\pmb{\delta}} &\sim \mathcal{N}(0, 1) \\
 \pmb{\Sigma}_{\pmb{\gamma}} &= \pmb{\sigma}_{\pmb{\gamma}} \pmb{\Omega}_{\pmb{\gamma}} \\
 \pmb{\Sigma}_{\pmb{\delta}} &= \pmb{\sigma}_{\pmb{\delta}} \pmb{\Omega}_{\pmb{\delta}} \\
+\pmb{\Omega}_{\pmb{\gamma}} &\sim \mathcal{LKJ}(\Omega_{0}) \\
+\pmb{\Omega}_{\pmb{\delta}} &\sim \mathcal{LKJ}(\Omega_{0}) \\
+\pmb{\sigma}_{\pmb{\gamma}} &\sim \text{Cauchy}(0, \sigma_{0}) \\
+\pmb{\sigma}_{\pmb{\delta}} &\sim \text{Cauchy}(0, \sigma_{0}) \\
 \end{align*}
 
 ## Hierarchical Factorization Machines in Stan
+
+- Data
 
 ```{stan output.var= "stan_fm2_1", echo = TRUE, eval = FALSE, size = "tiny"}
 data{
@@ -364,21 +367,31 @@ data{
 
 ## Hierarchical Factorization Machines in Stan
 
+- Parameters
+
 ```{stan output.var= "stan_fm2_2", echo = TRUE, eval = FALSE, size = "tiny"}
 parameters{
   vector[N] group_1_betas; // non-interacted coefficients
   vector[J] group_2_betas; // non-interacted coefficients
-  // matrix[N, K] gammas; // individual factors
-  // matrix[J, K] deltas; // group 2 factors
+  
   matrix[N, K] gamma_mu ; //gamma prior mean
-  vector<lower=0, upper=pi()/2>[K] gamma_sigma_unif ; // reparameterized Cauchy
+  vector<lower=0, upper=pi()/2>[K] gamma_sigma_unif ; // for reparameterized Cauchy
   cholesky_factor_corr[K] gamma_omega; // correlation matrix
   matrix[K, N] gamma_a ; // for non-centered parameterization
+  
   matrix[J , K] delta_mu ; //delta prior mean
-  vector<lower=0, upper=pi()/2>[K] delta_sigma_unif ; // reparameterized Cauchy
+  vector<lower=0, upper=pi()/2>[K] delta_sigma_unif ; // for reparameterized Cauchy
   cholesky_factor_corr[K] delta_omega; // correlation matrix
   matrix[K, J] delta_a ; // for non-centered parameterization
 }
+```
+
+
+## Hierarchical Factorization Machines in Stan
+
+- Transformed Parameters
+
+```{stan output.var= "stan_fm2_2_1", echo = TRUE, eval = FALSE, size = "tiny"}
 
 transformed parameters{
   real linear_predictor[(N*J)] ;
@@ -386,19 +399,100 @@ transformed parameters{
   matrix[N, K] gammas ;
   vector<lower=0>[K] delta_sigma;
   matrix[J, K] deltas ;
+  
+  // reparameterized cauchy
   for (k in 1:K) {
-    gamma_sigma[k] = gamma_sigma_prior .* tan(gamma_sigma_unif[k]) ; // reparameterized cauchy
+    gamma_sigma[k] = gamma_sigma_prior .* tan(gamma_sigma_unif[k]) ; 
   }
   for (k in 1:K) {
-    delta_sigma[k] = delta_sigma_prior .* tan(delta_sigma_unif[k]) ; // reparameterized cauchy
+    delta_sigma[k] = delta_sigma_prior .* tan(delta_sigma_unif[k]) ; 
   }
+  
   // non-centered parameterization
   gammas = gamma_mu + (diag_pre_multiply(gamma_sigma, gamma_omega) * gamma_a)' ; 
   deltas = delta_mu + (diag_pre_multiply(delta_sigma, delta_omega) * delta_a)' ;
+  
   for(i in 1:(N*J)){
     linear_predictor[i] = 
       group_1_betas[X[i, 1]] + group_2_betas[X[i, 2]] + 
       (gammas[X[i, 1], ]  * deltas[ X[i, 2], ]');
   }
 }
+```
+
+
+## Hierarchical Factorization Machines in Stan
+
+- Model
+
+```{stan output.var= "stan_fm2_3", echo = TRUE, eval = FALSE, size = "tiny"}
+model{
+  
+  // regression coefficients
+  group_1_betas ~ normal(0, beta_sigma) ;
+  group_2_betas ~ normal(0, beta_sigma) ;
+
+  // correlation matrices
+  gamma_omega ~ lkj_corr_cholesky(5) ;
+  delta_omega ~ lkj_corr_cholesky(5) ;
+  
+  // for non-centered parameterization
+  to_vector(gamma_a) ~ std_normal() ;
+  to_vector(delta_a) ~ std_normal() ;
+  
+  
+  // hierarchical means
+  for(n in 1:N){
+    gamma_mu[n, ] ~ normal(0, 1) ;
+  }  
+  for(j in 1:J){
+    delta_mu[j, ] ~ normal(0, 1) ;
+  }
+  
+  // outcome
+  y ~ normal(linear_predictor, y_sigma) ;
+}
+```
+
+## Fitting a (Hierarchical) Model to Simulated Data
+
+```{r, stan_fm2_4, echo = FALSE, message=FALSE, error=FALSE, warning=FALSE, fig.height= 4, dpi = 640, cache = TRUE }
+library(rstan)
+library(bayesplot)
+library(cowplot)
+load("simulated_data.rdata")
+load("hierarchical_fm.rdata")
+color_scheme_set("red")
+
+m1_posterior <- extract(m1_fit)
+p1 <- ppc_dens_overlay(y = fm_simulation_1[[1]]$y, yrep = m1_posterior$y_pred[seq(1, 4000, 10), ]) + labs(title = "Hierarchical Model 1 Posterior Predictive")
+m2_posterior <- extract(m2_fit)
+p2 <- ppc_dens_overlay(y = fm_simulation_2[[1]]$y, yrep = m2_posterior$y_pred[seq(1, 4000, 10), ]) + labs(title = "Hierarchical Model 2 Posterior Predictive")
+
+plot_grid(p1, p2, align = "h")
+
+
+```
+
+## Fitting a (Hierarchical) Model to Simulated Data
+
+```{r, stan_fm2_5, echo = FALSE, message=FALSE, error=FALSE, warning=FALSE, fig.height= 4, dpi = 640, cache=TRUE}
+library(rstan)
+library(ggplot2)
+load("simulated_data.rdata")
+load("hierarchical_fm.rdata")
+m1_posterior <- extract(m1_fit)
+m2_posterior <- extract(m2_fit)
+
+mse <- function(y_pred, y_actual){
+  mean((y_actual - y_pred)^2)
+}
+
+m1_mse <- apply(X = m1_posterior$y_pred, MARGIN = 1, FUN = mse, y_actual = fm_simulation_1[[1]]$y)
+m2_mse <- apply(X = m2_posterior$y_pred, MARGIN = 1, FUN = mse, y_actual = fm_simulation_2[[1]]$y)
+combined <- rbind(data.frame(varname = "Model 1 Mean Squared Error", mse = m1_mse),
+data.frame(varname = "Model 2 Mean Squared Error", mse = m2_mse))
+
+ggplot(data = combined, aes(mse)) + geom_density() + facet_wrap(~varname)
+# TODO: make this pretty
 ```
