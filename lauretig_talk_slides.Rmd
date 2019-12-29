@@ -318,7 +318,7 @@ data.frame(varname = "Model 2 Mean Squared Error", mse = m2_mse))
 
 ggplot(data = combined, aes(mse)) + geom_density() + 
   facet_wrap(~varname) + 
-  theme_minimal() + theme(panel.grid = element_blank())
+  theme_minimal() + theme(panel.grid = element_blank(), axis.text.y = element_blank())
 # TODO: make this pretty
 ```
 
@@ -490,6 +490,8 @@ m2_mse <- apply(X = m2_posterior$y_pred, MARGIN = 1, FUN = mse, y_actual = fm_si
 combined <- rbind(data.frame(varname = "Model 1 Mean Squared Error", mse = m1_mse),
 data.frame(varname = "Model 2 Mean Squared Error", mse = m2_mse))
 
-ggplot(data = combined, aes(mse)) + geom_density() + facet_wrap(~varname)
+ggplot(data = combined, aes(mse)) + geom_density()+ 
+  facet_wrap(~varname) + 
+  theme_minimal() + theme(panel.grid = element_blank(), axis.text.y = element_blank())
 # TODO: make this pretty
 ```
