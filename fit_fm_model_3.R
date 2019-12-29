@@ -15,6 +15,7 @@ m1_preds <- predict(m1, type = "response")
 data_subset <- fl_civil_war[
   c("warl", "gdpenl", "lmtnest", "polity2l", "ethfrac", "relfrac", "cname", "year", "onset")]
 data_subset <- na.omit(data_subset)
+data_subset <- data_subset[ data_subset$onset < 2, ]
 groups <- data.frame(cname = factor(data_subset$cname), 
            cnumber = as.numeric(factor(data_subset$cname)), 
            year = factor(data_subset$year), 
@@ -22,7 +23,7 @@ groups <- data.frame(cname = factor(data_subset$cname),
 X <- as.matrix(groups[, c(2, 4)])
 X2 <- as.matrix(data_subset[, 1:6])
 y <- as.numeric(data_subset$onset)
-data <- list(X = X, X2 = X2, y = y, N = max(X[, 1]), J = max(X[, 2]), K = 5,
+data <- list(n_obs = nrow(X), X = X, X2 = X2, y = y, N = max(X[, 1]), J = max(X[, 2]), K = 5,
      beta_sigma = 2,
      gamma_sigma_prior = 1, 
      delta_sigma_prior = 1, 
@@ -30,4 +31,6 @@ data <- list(X = X, X2 = X2, y = y, N = max(X[, 1]), J = max(X[, 2]), K = 5,
      delta_omega_prior = 5)
 # todo: figure out how to deal w/imbalananced panel
 
-m2_fit <- vb(object = m2, data = data)
+m2_fit <- vb(object = m2, data = data, tol_rel_obj = 5e-3, seed = 123)
+m2_posterior <- extract(m2_fit)
+colMeans(m2_posterior$y_pred)
