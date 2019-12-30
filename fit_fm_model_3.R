@@ -6,6 +6,7 @@ library(rstan)
 library(bayesplot)
 library(ggplot2)
 library(umap)
+library(MASS)
 fl_civil_war <- read.dta("repdata.dta")
 m2 <- stan_model("stan_fm_3.stan")
 
@@ -61,16 +62,22 @@ ggplot(data = predictions, aes(x = y, y = y_preds)) +
 
 # now, plotting latent factors
   
-  country_means <- apply(m2_posterior$gammas, c(2:3), FUN = mean)
-  countries <- unique(groups[, 1:2])
-  countries[ order(countries$cnumber), ]
-  rownames(country_means) <- countries$cname
-  country_sim <- sammon(dist(country_means))
-  plot(country_sim$points, type = "n")
-  text(country_sim$points, labels = as.character(rownames(country_means)) )
-  countries_umap <- umap(country_means)
-  plot(x = countries_umap$layout[, 1], y = countries_umap$layout[, 2], type = "n")
-  text(x = countries_umap$layout[, 1], y = countries_umap$layout[, 2], labels = as.character(rownames(country_means)) )
+country_means <- apply(m2_posterior$gammas, c(2:3), FUN = mean)
+countries <- unique(groups[, 1:2])
+countries[order(countries$cnumber),]
+rownames(country_means) <- countries$cname
+country_sim <- sammon(dist(country_means))
+plot(country_sim$points, type = "n")
+text(country_sim$points, labels = as.character(rownames(country_means)))
+countries_umap <- umap(country_means)
+plot(x = countries_umap$layout[, 1],
+     y = countries_umap$layout[, 2],
+     type = "n")
+text(
+  x = countries_umap$layout[, 1],
+  y = countries_umap$layout[, 2],
+  labels = as.character(rownames(country_means))
+)
 
-
+colMeans(m2_posterior$coef_betas)
 
