@@ -5,7 +5,7 @@ data{
   int<lower = 0> J ; // number of group 2 observations
   int<lower = 0> K ; // number of latent dimensions
   int X[(n_obs), 2]  ; // covariate matrix
-  matrix [(n_obs), 6] X2 ; //
+  matrix [(n_obs), 11] X2 ; //
   int<lower = 0, upper = 1> y[(n_obs)] ; // outcome
   real<lower = 0> beta_sigma ; // sd on regression coefficients
   real<lower = 0> gamma_sigma_prior ; //sd on gamma factors
@@ -19,7 +19,7 @@ parameters{
   vector[N] group_1_betas; // non-interacted coefficients
   vector[J] group_2_betas; // non-interacted coefficients
   
-  vector[6] coef_betas ; // betas on additional coefficients
+  vector[11] coef_betas ; // betas on additional coefficients
   
   matrix[N, K] gamma_mu ; //gamma prior mean
   vector<lower=0>[K] gamma_sigma ; // embedding SD
