@@ -318,7 +318,8 @@ data.frame(varname = "Model 2 Mean Squared Error", mse = m2_mse))
 
 ggplot(data = combined, aes(mse)) + geom_density() + 
   facet_wrap(~varname) + 
-  theme_minimal() + theme(panel.grid = element_blank(), axis.text.y = element_blank())
+  theme_minimal() + theme(panel.grid = element_blank(), axis.text.y = element_blank()) + 
+  labs(title = "", y = "", x = "Distribution of Mean-Squared Error Over Posterior Distibution")
 # TODO: make this pretty
 ```
 
@@ -492,6 +493,146 @@ data.frame(varname = "Model 2 Mean Squared Error", mse = m2_mse))
 
 ggplot(data = combined, aes(mse)) + geom_density()+ 
   facet_wrap(~varname) + 
-  theme_minimal() + theme(panel.grid = element_blank(), axis.text.y = element_blank())
+  theme_minimal() + theme(panel.grid = element_blank(), axis.text.y = element_blank()) + 
+  labs(title = "", y = "", x = "Distribution of Mean-Squared Error Over Posterior Distibution")
+
 # TODO: make this pretty
 ```
+
+
+# Fitting a Model to Real Data
+
+## Dataset
+
+- Fearon and Laitin, APSR 2003
+- Ethnic Fractionalization and the Onset of Civil War **TODO: Title Check**
+- Data and Code: **TODO: URL Here**
+- Fit model with logistic regression
+
+## Factorization Machine
+  
+- Modify Existing Code:
+  - Logistic Regression
+  - Additional Covariates
+- Note: Rare events outcome ($1\%$ positive outcomes)
+  
+
+## Model Fit
+
+```{r, fearon_laitin_model_fit, cache = TRUE, echo = FALSE, message=FALSE, error=FALSE, warning=FALSE, dpi = 640}
+library(data.table)
+library(Matrix)
+library(foreign)
+library(rstan)
+library(bayesplot)
+library(ggplot2)
+library(umap)
+library(MASS)
+load("fm_model_3_fit.rdata")
+fl_civil_war <- read.dta("repdata.dta")
+fl_civil_war <-fl_civil_war[ fl_civil_war$onset < 2, ]
+
+fl_civil_war <- fl_civil_war[ !(fl_civil_war$war == 1 & fl_civil_war$onset == 0), ]
+m1 <- glm(onset~warl+gdpenl+lmtnest+polity2l+ethfrac+relfrac, data = fl_civil_war, family = binomial())
+m1_preds <- predict(m1, type = "response")
+
+
+data_subset <- fl_civil_war[
+  c("warl", "gdpenl", "lpopl1", "lmtnest", "polity2l", "ethfrac", "relfrac", 
+    "ncontig",  "Oil", "nwstate", "instab",  "cname", "year", "onset")]
+data_subset <- na.omit(data_subset)
+data_subset <- data_subset[ data_subset$onset < 2, ]
+groups <- data.frame(cname = factor(data_subset$cname), 
+           cnumber = as.numeric(factor(data_subset$cname)), 
+           year = factor(data_subset$year), 
+           cyear = as.numeric(factor(data_subset$year)))
+X <- as.matrix(groups[, c(2, 4)])
+X2 <- as.matrix(data_subset[, 1:11])
+y <- as.numeric(data_subset$onset)
+data <- list(n_obs = nrow(X), X = X, X2 = X2, y = y, N = max(X[, 1]), 
+  J = max(X[, 2]), K = 5,
+     beta_sigma = 1,
+     gamma_sigma_prior = 1, 
+     delta_sigma_prior = 1, 
+     gamma_omega_prior = 2, 
+     delta_omega_prior = 2)
+m2_posterior <- extract(m2_fit)
+predictions <- data.frame(y = y, y_preds = colMeans(m2_posterior$y_pred), m1_preds = m1_preds)
+
+log_loss_binary <- function(actual, predicted, eps = 1e-15) {
+  predicted = pmin(pmax(predicted, eps), 1-eps)
+  - (sum(actual * log(predicted) + (1 - actual) * log(1 - predicted))) / length(actual)
+  }
+
+ll_fm <- log_loss_binary(actual = predictions$y, predicted = predictions$y_preds)
+ll_logit <- log_loss_binary(actual = predictions$y, predicted = predictions$m1_preds)
+
+
+ggplot(data = predictions, aes(x = y, y = y_preds)) + 
+  geom_jitter(width = .2, alpha = .3, size = .75) + 
+  geom_jitter(data = predictions, aes(x = y, y = m1_preds), 
+              width = .2, size = .75, alpha = .1, color = "red") + 
+  theme_minimal() + 
+  theme(
+    panel.grid = element_blank(), 
+    axis.text.x = element_blank(), 
+    plot.title = element_text(size = 20),
+    plot.subtitle = element_text(size = 16)) +
+  labs(
+    title = "Predicted Probabilities for Each Model;\nRed is Logit, Black is Factorization Machine", 
+    subtitle = paste0(
+      "Logistic Regression Log-loss: ", round(ll_logit, 3), 
+      " Factorization Machine Log-loss: ", round(ll_fm, 3)), 
+    y = "Mean Predicted Probabilities", x = "Outcome Categories")
+
+```
+
+
+## Clustering Factors
+
+Use Sammon Mapping to cluster factors
+
+```{r, sammon_mapping, cache = TRUE, echo = FALSE, message=FALSE, error=FALSE, warning=FALSE, dpi = 640}
+library(data.table)
+library(Matrix)
+library(foreign)
+library(rstan)
+library(bayesplot)
+library(ggplot2)
+library(umap)
+library(MASS)
+set.seed(123)
+load("fm_model_3_fit.rdata")
+fl_civil_war <- read.dta("repdata.dta")
+fl_civil_war <-fl_civil_war[ fl_civil_war$onset < 2, ]
+fl_civil_war <- fl_civil_war[ !(fl_civil_war$war == 1 & fl_civil_war$onset == 0), ]
+
+data_subset <- fl_civil_war[
+  c("warl", "gdpenl", "lpopl1", "lmtnest", "polity2l", "ethfrac", "relfrac", 
+    "ncontig",  "Oil", "nwstate", "instab",  "cname", "year", "onset")]
+data_subset <- na.omit(data_subset)
+data_subset <- data_subset[ data_subset$onset < 2, ]
+groups <- data.frame(cname = factor(data_subset$cname), 
+           cnumber = as.numeric(factor(data_subset$cname)), 
+           year = factor(data_subset$year), 
+           cyear = as.numeric(factor(data_subset$year)))
+X <- as.matrix(groups[, c(2, 4)])
+X2 <- as.matrix(data_subset[, 1:11])
+y <- as.numeric(data_subset$onset)
+data <- list(n_obs = nrow(X), X = X, X2 = X2, y = y, N = max(X[, 1]), 
+  J = max(X[, 2]), K = 5,
+     beta_sigma = 1,
+     gamma_sigma_prior = 1, 
+     delta_sigma_prior = 1, 
+     gamma_omega_prior = 2, 
+     delta_omega_prior = 2)
+m2_posterior <- extract(m2_fit)
+country_means <- apply(m2_posterior$gammas, c(2:3), FUN = mean)
+countries <- unique(groups[, 1:2])
+# countries[order(countries$cnumber),]
+rownames(country_means) <- as.character(countries[order(countries$cnumber),]$cname)
+country_sim <- sammon(dist(country_means), trace = FALSE)
+plot(country_sim$points, type = "n")
+text(country_sim$points, labels = as.character(rownames(country_means)))
+```
+

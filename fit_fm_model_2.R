@@ -12,7 +12,7 @@ m1_fit <- sampling(m1, data = fm_simulation_1[[1]],
 # posterior predictive check
 m1_posterior <- extract(m1_fit)
 plot(fm_simulation_1[[1]]$y, colMeans(m1_posterior$y_pred))
-p <- ppc_dens_overlay(y = fm_simulation_1[[1]]$y, yrep = m1_posterior$y_pred[seq(1, 1000, 10), ])
+p <- ppc_dens_overlay(y = fm_simulation_1[[1]]$y, yrep = m1_posterior$y_pred[seq(1, 4000, 10), ])
 
 
 

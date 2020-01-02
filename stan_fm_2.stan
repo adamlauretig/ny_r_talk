@@ -36,6 +36,7 @@ transformed parameters{
 
   gammas = gamma_mu + (diag_pre_multiply(gamma_sigma, gamma_omega) * gamma_a)' ;
   deltas = delta_mu + (diag_pre_multiply(delta_sigma, delta_omega) * delta_a)' ;
+  // deltas =  (diag_pre_multiply(delta_sigma, delta_omega) * delta_a)' ;
 
   for(i in 1:(N*J)){
     linear_predictor[i] = 

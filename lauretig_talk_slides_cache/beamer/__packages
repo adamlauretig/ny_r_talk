@@ -4,3 +4,8 @@ ggplot2
 rstan
 bayesplot
 cowplot
+data.table
+Matrix
+foreign
+umap
+MASS

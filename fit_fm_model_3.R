@@ -15,7 +15,7 @@ m2 <- stan_model("stan_fm_3.stan")
 # 
 fl_civil_war <-fl_civil_war[ fl_civil_war$onset < 2, ]
 fl_civil_war <- fl_civil_war[ !(fl_civil_war$war == 1 & fl_civil_war$onset == 0), ]
-m1 <- glm(onset~warl+gdpenl+lmtnest+polity2l+ethfrac+relfrac, data = fl_civil_war)
+m1 <- glm(onset~warl+gdpenl+lmtnest+polity2l+ethfrac+relfrac, data = fl_civil_war, family = binomial())
 m1_preds <- predict(m1, type = "response")
 
 data_subset <- fl_civil_war[
