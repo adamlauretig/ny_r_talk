@@ -24,6 +24,8 @@ knitr::knit_hooks$set(chunk = function(x, options) {
 - Stan code $+$ simulations!
   - Start with simple model
   - Next, hierarchical model
+- Finally, real data analysis:
+  - Plotting model results
 
 ## Who I Am
 
@@ -49,6 +51,7 @@ knitr::knit_hooks$set(chunk = function(x, options) {
 ## Factorization Machines
 
 - Combine regression with a latent variable model on the residuals
+- Can plug and play with any generalized linear model
 
 # But Why?
 
@@ -151,20 +154,17 @@ linear_predictor <- X_mat %*% betas
 
 Next, latent factors:
 ```{r simulate_fm2, echo = TRUE, eval = FALSE, size = "tiny"}
-# group_1 factors are gammas
-gammas <- mvrnorm(
-  n = N,
-  mu = rep(0, K),
-  Sigma = diag(K))
+
+gamma_omega <- rlkjcorr(n = 1, K = K, eta = gamma_omega_prior)
+delta_omega <- rlkjcorr(n = 1, K = K, eta = delta_omega_prior)
+
+gammas <- mvrnorm(n = N, mu = rep(0, K), Sigma = gamma_omega)
 
 # group 2 factors are deltas
-deltas <- mvrnorm(
-  n = J,
-  mu = rep(0, K),
-  Sigma = diag(K))
+deltas <- mvrnorm(n = J, mu = rep(0, K), Sigma = delta_omega)
 
-factor_terms <-
-  matrix(NA, nrow = nrow(linear_predictor), ncol = 1)
+factor_terms <-matrix(
+  NA, nrow = nrow(linear_predictor), ncol = 1)
 
 for (i in 1:nrow(predictors)) {
   g1 <- as.character(predictors[i, 1])
@@ -330,7 +330,7 @@ ggplot(data = combined, aes(mse)) + geom_density() +
 
 - Basic FM implementation assumes all parameters are independent
 - Hierarchical: Sharing parameters across groups
-- Sharing parameters $ = $ sharing infomation!
+- Sharing parameters = sharing information!
 
 
 ## Hierarchical Factorization Machines
@@ -346,8 +346,8 @@ y_{nj} &\sim \mathcal{N}( \pmb{x}_{n} \beta_{1} + \pmb{x}_{j} \beta_{2} + \pmb{\
 \pmb{\Sigma}_{\pmb{\delta}} &= \pmb{\sigma}_{\pmb{\delta}} \pmb{\Omega}_{\pmb{\delta}} \\
 \pmb{\Omega}_{\pmb{\gamma}} &\sim \mathcal{LKJ}(\Omega_{0}) \\
 \pmb{\Omega}_{\pmb{\delta}} &\sim \mathcal{LKJ}(\Omega_{0}) \\
-\pmb{\sigma}_{\pmb{\gamma}} &\sim \text{Cauchy}(0, \sigma_{0}) \\
-\pmb{\sigma}_{\pmb{\delta}} &\sim \text{Cauchy}(0, \sigma_{0}) \\
+\pmb{\sigma}_{\pmb{\gamma}} &\sim \mathcal{N}(0, \sigma_{0}) \\
+\pmb{\sigma}_{\pmb{\delta}} &\sim \mathcal{N}(0, \sigma_{0}) \\
 \end{align*}
 
 ## Hierarchical Factorization Machines in Stan
@@ -569,9 +569,9 @@ ll_logit <- log_loss_binary(actual = predictions$y, predicted = predictions$m1_p
 
 
 ggplot(data = predictions, aes(x = y, y = y_preds)) + 
-  geom_jitter(width = .2, alpha = .3, size = .75) + 
+  geom_jitter(width = .2, alpha = .3, size = 1) + 
   geom_jitter(data = predictions, aes(x = y, y = m1_preds), 
-              width = .2, size = .75, alpha = .1, color = "red") + 
+              width = .2, size = 1, alpha = .3, color = "red") + 
   theme_minimal() + 
   theme(
     panel.grid = element_blank(), 
@@ -667,7 +667,11 @@ ggplot(data = country_sim_df2, aes( x = x, y = y)) +
 
 ## Thank You!
 
-Thank you!
+\begin{center}
+
+\huge Thank you!
 
 Code and Slides: https://github.com/adamlauretig/ny_r_talk
 Twitter: @Lauretig
+
+\end{center}
