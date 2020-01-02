@@ -632,7 +632,42 @@ countries <- unique(groups[, 1:2])
 # countries[order(countries$cnumber),]
 rownames(country_means) <- as.character(countries[order(countries$cnumber),]$cname)
 country_sim <- sammon(dist(country_means), trace = FALSE)
-plot(country_sim$points, type = "n")
-text(country_sim$points, labels = as.character(rownames(country_means)))
+country_sim_df <- data.frame(
+  countries = rownames(country_sim$points), 
+  x = country_sim$points[, 1], y = country_sim$points[, 2])
+
+ggplot(data = country_sim_df, aes( x = x, y = y)) + 
+  geom_text(aes(label = countries)) + theme_minimal()
+
+
 ```
 
+
+## Clustering Factors
+
+Zoom in on hairball
+
+```{r, sammon_mapping2, cache = TRUE, echo = FALSE, message=FALSE, error=FALSE, warning=FALSE, dpi = 640}
+country_sim_df2 <- country_sim_df[ country_sim_df$x > (-.05) & country_sim_df$x < .05, ]
+country_sim_df2 <- country_sim_df2[ country_sim_df2$y > (-.05) & country_sim_df2$y < .05, ]
+ggplot(data = country_sim_df2, aes( x = x, y = y)) + 
+  geom_text(aes(label = countries)) + theme_minimal()
+
+```
+
+## Wrap Up
+
+- Factorization Machines: Extend GLM models with matrix factorization on residuals
+- Two versions:
+  - Factors distibuted $\mathcal{N}(0, 1)$
+  - Hierarchical Model
+- Use dimensionality reduction to plot factors
+- What if there are more than two interactions?
+  - Tensor Factorization/Exponential Machines
+
+## Thank You!
+
+Thank you!
+
+Code and Slides: https://github.com/adamlauretig/ny_r_talk
+Twitter: @Lauretig
