@@ -667,11 +667,13 @@ ggplot(data = country_sim_df2, aes( x = x, y = y)) +
 
 ## Thank You!
 
-\begin{center}
+\center
 
-\huge Thank you!
 
 Code and Slides: https://github.com/adamlauretig/ny_r_talk
 Twitter: @Lauretig
 
-\end{center}
+
+\huge Thank you!
+
+\center
