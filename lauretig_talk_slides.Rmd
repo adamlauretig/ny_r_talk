@@ -38,12 +38,12 @@ knitr::knit_hooks$set(chunk = function(x, options) {
 - Descriptive Inference: is there an association between $\pmb{X}$ and $\pmb{y}$?
 - Prediction: with $\pmb{X}$ and $\pmb{y}$, what is $\pmb{y}$ for a new $\pmb{X}$?
 - Causal Inference: does changing $\pmb{X}$, change $\pmb{y}$?
-- Shameless plug: Book Chapter **insert link**
+- Shameless plug: Book Chapter https://www.dropbox.com/s/cmwd15wmad4coy9/Statistics%20and%20International%20Security.pdf
 
 ## Latent Variable Models/Unsupervised models
 
 - Learning parameters to reconstruct observed data
-- Ex: Principal Components Analysis, Factor Analysis, Matrix Factorization, etc
+- Ex: Principal Components Analysis, Factor Analysis, Matrix Factorization, Ideal Point Models, Word2vec
 - Data $\pmb{X}_{N \times J}$ is decomposed into two low rank matrices: $\pmb{\gamma}_{N \times K}$ and $\pmb{\delta}_{K \times J}$
 - Various assumptions about the structure of $\pmb{\gamma}$ and $\pmb{\delta}$
 
@@ -63,7 +63,7 @@ knitr::knit_hooks$set(chunk = function(x, options) {
 - Categorical predictors $\pmb{x}_{n \in N}$, $\pmb{x}_{j \in J}$
 - Outcome $\pmb{y}$ 
 - Parameters $\pmb{\beta}$
-<!-- - Error $\varepsilon_{nj}$ -->
+- Error $\varepsilon_{nj}$
 $$ y_{nj} = \pmb{x}_{n} \beta_{1} + \pmb{x}_{j} \beta_{2} + \varepsilon_{nj} $$
 
 ```{r, chunk_1, eval = FALSE, echo = TRUE, size = 'tiny'}
@@ -109,8 +109,8 @@ Basic model
 
 
 \begin{align*}
-y_{nj} &\sim \mathcal{N}( \pmb{x}_{n} \beta_{1} + \pmb{x}_{j} \beta_{2} +\pmb{\gamma}_{n} \cdot \pmb{\delta}_{j}^{\top}, 1) \\
-\pmb{\beta} &\sim \mathcal{N}(0, \sigma^{2}) \\
+y_{nj} &\sim \mathcal{N}( \pmb{x}_{n} \beta_{1} + \pmb{x}_{j} \beta_{2} +\pmb{\gamma}_{n} \cdot \pmb{\delta}_{j}^{\top}, \sigma_{y}) \\
+\pmb{\beta} &\sim \mathcal{N}(0, \sigma_{\beta}) \\
 \gamma_{n,k} &\sim \mathcal{N}(0,1) \\
 \delta_{j,k} &\sim \mathcal{N}(0, 1) \\
 \end{align*}
@@ -122,18 +122,15 @@ First, the regression component:
 
 ```{r, simulate_regression, echo = TRUE, eval = FALSE, size = "tiny"}
 seed_to_use = 123
-N = 1
-J = 1
-K = 1
 set.seed(seed_to_use)
 # number of levels for first covariate
-N <- N
+N <- 100
 group_1 <- paste0("i", 1:N)
 # number of levels for second covariate
-J <- J
+J <- 20
 group_2 <- paste0("j", 1:J)
 # number of latent dimensions
-K <- K
+K <- 5
 
 # observed data ----
 predictors <- expand.grid(group_1 = group_1, group_2 = group_2)
@@ -338,16 +335,16 @@ ggplot(data = combined, aes(mse)) + geom_density() +
 \begin{align*}
 y_{nj} &\sim \mathcal{N}( \pmb{x}_{n} \beta_{1} + \pmb{x}_{j} \beta_{2} + \pmb{\gamma}_{n} \cdot \pmb{\delta}_{j}^{\top}, \sigma_{y}) \\
 \pmb{\beta} &\sim \mathcal{N}(0, \sigma_{\beta}) \\
-\gamma_{n,} &\sim \mathcal{N}(\pmb{\mu}_{\pmb{\gamma}}, \pmb{\Sigma}_{\pmb{\gamma}}) \\
-\delta_{j,} &\sim \mathcal{N}(\pmb{\mu}_{\pmb{\delta}}, \pmb{\Sigma}_{\pmb{\delta}}) \\
+\gamma_{n,} &\sim \mathcal{MVN}(\pmb{\mu}_{\pmb{\gamma}}, \pmb{\Sigma}_{\pmb{\gamma}}) \\
+\delta_{j,} &\sim \mathcal{MVN}(\pmb{\mu}_{\pmb{\delta}}, \pmb{\Sigma}_{\pmb{\delta}}) \\
 {\mu}_{\pmb{\gamma}} &\sim \mathcal{N}(0, 1) \\
 {\mu}_{\pmb{\delta}} &\sim \mathcal{N}(0, 1) \\
 \pmb{\Sigma}_{\pmb{\gamma}} &= \pmb{\sigma}_{\pmb{\gamma}} \pmb{\Omega}_{\pmb{\gamma}} \\
 \pmb{\Sigma}_{\pmb{\delta}} &= \pmb{\sigma}_{\pmb{\delta}} \pmb{\Omega}_{\pmb{\delta}} \\
 \pmb{\Omega}_{\pmb{\gamma}} &\sim \mathcal{LKJ}(\Omega_{0}) \\
 \pmb{\Omega}_{\pmb{\delta}} &\sim \mathcal{LKJ}(\Omega_{0}) \\
-\pmb{\sigma}_{\pmb{\gamma}} &\sim \mathcal{N}(0, \sigma_{0}) \\
-\pmb{\sigma}_{\pmb{\delta}} &\sim \mathcal{N}(0, \sigma_{0}) \\
+\pmb{\sigma}_{\pmb{\gamma}} &\sim \mathcal{TN}(0, \sigma_{0}) \\
+\pmb{\sigma}_{\pmb{\delta}} &\sim \mathcal{TN}(0, \sigma_{0}) \\
 \end{align*}
 
 ## Hierarchical Factorization Machines in Stan
@@ -364,9 +361,9 @@ data{
   real<lower = 0> beta_sigma ; // sd on regression coefficients
   real<lower = 0> y_sigma ; // sd on the outcome, y
   real<lower = 0> gamma_sigma_prior ; //sd on gamma factors
-  real<lower = 0> delta_sigma_prior ; //sd on gamma factors
+  real<lower = 0> delta_sigma_prior ; //sd on dela factors
   real<lower = 0> gamma_omega_prior ; // prior on omega value for gamma
-  real<lower = 0> delta_omega_prior ; // prior on omega value for gamma
+  real<lower = 0> delta_omega_prior ; // prior on omega value for delta
 
 }
 ```
@@ -427,6 +424,7 @@ model{
   group_1_betas ~ normal(0, beta_sigma) ;
   group_2_betas ~ normal(0, beta_sigma) ;
 
+  // factor sd: half-normal distribution
   gamma_sigma ~ normal(0, gamma_sigma_prior) ; 
   delta_sigma ~ normal(0, delta_sigma_prior) ; 
 
@@ -505,13 +503,15 @@ ggplot(data = combined, aes(mse)) + geom_density()+
 ## Dataset
 
 - Fearon and Laitin, APSR 2003
-- Ethnic Fractionalization and the Onset of Civil War **TODO: Title Check**
-- Data and Code: **TODO: URL Here**
+- Ethnicity, Insurgency, and Civil War 
+- Goal: Understand relationship between ethnic fractionalization and the onset of Civil War
+- Country-year data: All countries in the world, 1946-1999
+- Data and Code: https://web.stanford.edu/group/ethnic/publicdata/publicdata.html
 - Fit model with logistic regression
 
 ## Factorization Machine
   
-- Modify Existing Code:
+- Modify Existing FM Code:
   - Logistic Regression
   - Additional Covariates
 - Note: Rare events outcome ($1\%$ positive outcomes)
@@ -579,7 +579,7 @@ ggplot(data = predictions, aes(x = y, y = y_preds)) +
     plot.title = element_text(size = 20),
     plot.subtitle = element_text(size = 16)) +
   labs(
-    title = "Predicted Probabilities for Each Model;\nRed is Logit, Black is Factorization Machine", 
+    title = "Predicted Probabilities for Each Model;\nRed is Logistic Regression, Black is Factorization Machine", 
     subtitle = paste0(
       "Logistic Regression Log-loss: ", round(ll_logit, 3), 
       " Factorization Machine Log-loss: ", round(ll_fm, 3)), 
