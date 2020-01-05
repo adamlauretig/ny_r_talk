@@ -44,15 +44,18 @@ data <- list(n_obs = nrow(X), X = X, X2 = X2, y = y, N = max(X[, 1]),
      gamma_omega_prior = 2, 
      delta_omega_prior = 2)
 
-# quick model fit checking
+# fitting model
 # m2_fit <- vb(object = m2, data = data, tol_rel_obj = 5e-3, seed = 123)
 m2_fit <- sampling(object = m2, data = data, seed = 123, chains = 4, cores = 4, 
                    control = list(adapt_delta = .95))
 save(m2_fit, file = "fm_model_3_fit.rdata")
+
+# extracting predictions, comparing to logistic regression
 m2_posterior <- extract(m2_fit)
 hist(colMeans(m2_posterior$y_pred))
 predictions <- data.frame(y = y, y_preds = colMeans(m2_posterior$y_pred), m1_preds = m1_preds)
 
+# log loss to assess model fit
 log_loss_binary <- function(actual, predicted, eps = 1e-15) {
   predicted = pmin(pmax(predicted, eps), 1-eps)
   - (sum(actual * log(predicted) + (1 - actual) * log(1 - predicted))) / length(actual)
@@ -67,14 +70,16 @@ ggplot(data = predictions, aes(x = y, y = y_preds)) +
               width = .1, size = .5, alpha = .1, color = "red")
 
 # now, plotting latent factors
-  
 country_means <- apply(m2_posterior$gammas, c(2:3), FUN = mean)
 countries <- unique(groups[, 1:2])
 countries[order(countries$cnumber),]
 rownames(country_means) <- countries$cname
+# sammon mapping
 country_sim <- sammon(dist(country_means))
 plot(country_sim$points, type = "n")
 text(country_sim$points, labels = as.character(rownames(country_means)))
+
+# using umap instead of sammon mapping
 countries_umap <- umap(country_means)
 plot(x = countries_umap$layout[, 1],
      y = countries_umap$layout[, 2],
@@ -85,5 +90,4 @@ text(
   labels = as.character(rownames(country_means))
 )
 
-colMeans(m2_posterior$coef_betas)
 
