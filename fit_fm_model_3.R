@@ -1,4 +1,3 @@
-rm(list = ls())
 library(data.table)
 library(Matrix)
 library(foreign)
@@ -7,27 +6,34 @@ library(bayesplot)
 library(ggplot2)
 library(umap)
 library(MASS)
+
+# fearon and laitin data
 fl_civil_war <- read.dta("repdata.dta")
 m2 <- stan_model("stan_fm_3.stan")
 
-# /* Model #1 */
-# logit onset warl gdpenl lpopl lmtnest ncontig Oil nwstate instab polity2l ethfrac relfrac ,nolog
-# 
+# cleaning up strange data
 fl_civil_war <-fl_civil_war[ fl_civil_war$onset < 2, ]
+# only getting years with onsets (not including years where there is already ongoing war)
 fl_civil_war <- fl_civil_war[ !(fl_civil_war$war == 1 & fl_civil_war$onset == 0), ]
+
+# basic logistic regression
 m1 <- glm(onset~warl+gdpenl+lmtnest+polity2l+ethfrac+relfrac, data = fl_civil_war, family = binomial())
 m1_preds <- predict(m1, type = "response")
 
+# prepping data for stan
+# getting covariates
 data_subset <- fl_civil_war[
   c("warl", "gdpenl", "lpopl1", "lmtnest", "polity2l", "ethfrac", "relfrac", 
     "ncontig",  "Oil", "nwstate", "instab",  "cname", "year", "onset")]
 data_subset <- na.omit(data_subset)
 data_subset <- data_subset[ data_subset$onset < 2, ]
+# creating groups (factors for FM)
 groups <- data.frame(cname = factor(data_subset$cname), 
            cnumber = as.numeric(factor(data_subset$cname)), 
            year = factor(data_subset$year), 
            cyear = as.numeric(factor(data_subset$year)))
 X <- as.matrix(groups[, c(2, 4)])
+# additional covariates
 X2 <- as.matrix(data_subset[, 1:11])
 y <- as.numeric(data_subset$onset)
 data <- list(n_obs = nrow(X), X = X, X2 = X2, y = y, N = max(X[, 1]), 
