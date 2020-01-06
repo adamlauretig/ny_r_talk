@@ -3,6 +3,9 @@ title: "Bayesian Factorization Machines with Stan and R"
 author: "Adam M. Lauretig"
 date: "12/18/2019"
 output: beamer_presentation
+mainfont: Palatino
+header-includes:
+  - \usepackage{palatino}
 ---
 
 
