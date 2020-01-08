@@ -715,12 +715,29 @@ country_umap_df <- data.frame(
   countries = rownames(countries_umap$layout), 
   x = countries_umap$layout[, 1], y = countries_umap$layout[, 2])
 
+
+
 ggplot(data = country_umap_df, aes( x = x, y = y)) + 
   geom_text(aes(label = countries)) + theme_minimal()
 
 
 ```
 
+
+## Clustering Factors
+
+Zoom in on bottom right
+
+```{r, umap_mapping2, cache = TRUE, echo = FALSE, message=FALSE, error=FALSE, warning=FALSE, dpi = 640}
+
+country_umap_df2 <- country_umap_df[ country_umap_df$x > (1.5) , ]
+country_umap_df2 <- country_umap_df2[ country_umap_df2$y > (-3) & country_umap_df2$y < (-1), ]
+
+
+ggplot(data = country_umap_df2, aes( x = x, y = y)) + 
+  geom_text(aes(label = countries)) + theme_minimal()
+
+```
 
 ## Wrap Up
 
