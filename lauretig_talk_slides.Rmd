@@ -46,6 +46,7 @@ knitr::knit_hooks$set(chunk = function(x, options) {
 ## Latent Variable Models/Unsupervised models
 
 - Learning parameters to reconstruct observed data
+  - CS: For prediction, Social Science: for inference
 - Ex: Principal Components Analysis, Factor Analysis, Matrix Factorization, Ideal Point Models, Word2vec
 - Data $\pmb{X}_{N \times J}$ is decomposed into two low rank matrices: $\pmb{\gamma}_{N \times K}$ and $\pmb{\delta}_{K \times J}$
 - Various assumptions about the structure of $\pmb{\gamma}$ and $\pmb{\delta}$
@@ -53,7 +54,7 @@ knitr::knit_hooks$set(chunk = function(x, options) {
 
 ## Factorization Machines
 
-- Combine regression with a latent variable model on the residuals
+- Combine regression on observables with a latent variable model on the residuals
 - Can plug and play with any generalized linear model
 
 # But Why?
@@ -218,7 +219,7 @@ Use Stan to fit FMs:
 parameters{
   vector[N] group_1_betas; // non-interacted coefficients
   vector[J] group_2_betas; // non-interacted coefficients
-  matrix[N, K] gammas; // individual factors
+  matrix[N, K] gammas; // group 1 factors
   matrix[J, K] deltas; // group 2 factors
 }
 
@@ -326,7 +327,6 @@ ggplot(data = combined, aes(mse)) + geom_density() +
   facet_wrap(~varname) + 
   theme_minimal() + theme(panel.grid = element_blank(), axis.text.y = element_blank()) + 
   labs(title = "", y = "", x = "Distribution of Mean-Squared Error Over Posterior Distibution")
-# TODO: make this pretty
 ```
 
 
@@ -372,7 +372,7 @@ data{
   real<lower = 0> beta_sigma ; // sd on regression coefficients
   real<lower = 0> y_sigma ; // sd on the outcome, y
   real<lower = 0> gamma_sigma_prior ; //sd on gamma factors
-  real<lower = 0> delta_sigma_prior ; //sd on dela factors
+  real<lower = 0> delta_sigma_prior ; //sd on delta factors
   real<lower = 0> gamma_omega_prior ; // prior on omega value for gamma
   real<lower = 0> delta_omega_prior ; // prior on omega value for delta
 
@@ -665,6 +665,62 @@ ggplot(data = country_sim_df2, aes( x = x, y = y)) +
   geom_text(aes(label = countries)) + theme_minimal()
 
 ```
+
+## Clustering Factors
+
+UMAP
+
+
+```{r, umap_mapping, cache = TRUE, echo = FALSE, message=FALSE, error=FALSE, warning=FALSE, dpi = 640}
+library(data.table)
+library(Matrix)
+library(foreign)
+library(rstan)
+library(bayesplot)
+library(ggplot2)
+library(umap)
+library(MASS)
+set.seed(123)
+load("fm_model_3_fit.rdata")
+fl_civil_war <- read.dta("repdata.dta")
+fl_civil_war <-fl_civil_war[ fl_civil_war$onset < 2, ]
+fl_civil_war <- fl_civil_war[ !(fl_civil_war$war == 1 & fl_civil_war$onset == 0), ]
+
+data_subset <- fl_civil_war[
+  c("warl", "gdpenl", "lpopl1", "lmtnest", "polity2l", "ethfrac", "relfrac", 
+    "ncontig",  "Oil", "nwstate", "instab",  "cname", "year", "onset")]
+data_subset <- na.omit(data_subset)
+data_subset <- data_subset[ data_subset$onset < 2, ]
+groups <- data.frame(cname = factor(data_subset$cname), 
+           cnumber = as.numeric(factor(data_subset$cname)), 
+           year = factor(data_subset$year), 
+           cyear = as.numeric(factor(data_subset$year)))
+X <- as.matrix(groups[, c(2, 4)])
+X2 <- as.matrix(data_subset[, 1:11])
+y <- as.numeric(data_subset$onset)
+data <- list(n_obs = nrow(X), X = X, X2 = X2, y = y, N = max(X[, 1]), 
+  J = max(X[, 2]), K = 5,
+     beta_sigma = 1,
+     gamma_sigma_prior = 1, 
+     delta_sigma_prior = 1, 
+     gamma_omega_prior = 2, 
+     delta_omega_prior = 2)
+m2_posterior <- extract(m2_fit)
+country_means <- apply(m2_posterior$gammas, c(2:3), FUN = mean)
+countries <- unique(groups[, 1:2])
+# countries[order(countries$cnumber),]
+rownames(country_means) <- as.character(countries[order(countries$cnumber),]$cname)
+countries_umap <- umap(country_means)
+country_umap_df <- data.frame(
+  countries = rownames(countries_umap$layout), 
+  x = countries_umap$layout[, 1], y = countries_umap$layout[, 2])
+
+ggplot(data = country_umap_df, aes( x = x, y = y)) + 
+  geom_text(aes(label = countries)) + theme_minimal()
+
+
+```
+
 
 ## Wrap Up
 
