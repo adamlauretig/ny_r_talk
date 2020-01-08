@@ -107,6 +107,12 @@ $$ y_{nj} = \pmb{x}_{n} \beta_{1} + \pmb{x}_{j} \beta_{2} + \pmb{\gamma}_{n} \cd
 
 ## Factorization Machines
 
+- Low-rank structure regularizes interaction term
+- Don't need to observe interaction to predict
+
+
+## Factorization Machines
+
 Basic model
 - Each element of $\delta_{j}$ and $\gamma_{n}$ is distributed standard normal: $\mathcal{N}(0, 1)$
 
@@ -329,8 +335,10 @@ ggplot(data = combined, aes(mse)) + geom_density() +
 ## Hierarchical Factorization Machines
 
 - Basic FM implementation assumes all parameters are independent
-- Hierarchical: Sharing parameters across groups
+- Hierarchical: Sharing parameters within groups
+  - Explicitly modeling correlation between members
 - Sharing parameters = sharing information!
+- *Caveat:* More parameters = more computation time
 
 
 ## Hierarchical Factorization Machines
