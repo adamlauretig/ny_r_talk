@@ -1,7 +1,8 @@
 ---
-title: "Bayesian Factorization Machines with Stan and R"
+title: "A Common Model, Separated by Two Disciplines"
+subtitle: "Bayesian Factorization Machines with Stan and R"
 author: "Adam M. Lauretig"
-date: "12/18/2019"
+date: "January 9, 2020"
 output: beamer_presentation
 mainfont: Palatino
 header-includes:
@@ -30,9 +31,9 @@ knitr::knit_hooks$set(chunk = function(x, options) {
 - Finally, real data analysis:
   - Plotting model results
 
-## Who I Am
+## Who Am I?
 
-- Senior Data Scientist, JUST Capital
+- Senior Data Scientist, JUST Capital\footnote{All views are mine alone, and do not represent JUST Capital, any of its funders, or anyone other than me.}
 - Ph.D. in Political Science (The Ohio State University); B.A. in Political Science (Grinnell College)
 - Word Embeddings, Causal Inference, Bayesian Statistics, Discrete Choice Models
  
