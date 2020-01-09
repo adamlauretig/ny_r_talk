@@ -1,3 +1,4 @@
+# NY R Users Meetup on January 9, 2020, presented by Adam Lauretig
 library(data.table)
 library(Matrix)
 library(foreign)

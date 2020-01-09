@@ -1,3 +1,5 @@
+// Bayesian Factorization Machine, N(0, 1) priors
+// NY R Users Meetup on January 9, 2020, presented by Adam Lauretig
 data{
   int<lower = 0> N ; // number of group 1 observations
   int<lower = 0> J ; // number of group 2 observations

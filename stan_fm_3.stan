@@ -1,4 +1,5 @@
-// factorization machine with hierarchical priors on latent factors
+// Factorization machine with hierarchical priors and binary outcome
+// NY R Users Meetup on January 9, 2020, presented by Adam Lauretig
 data{
   int<lower = 0> n_obs ; // number of group 1 observations
   int<lower = 0> N ; // number of group 1 observations

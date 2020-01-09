@@ -1,4 +1,5 @@
 // factorization machine with hierarchical priors on latent factors
+// NY R Users Meetup on January 9, 2020, presented by Adam Lauretig
 data{
   int<lower = 0> N ; // number of group 1 observations
   int<lower = 0> J ; // number of group 2 observations
